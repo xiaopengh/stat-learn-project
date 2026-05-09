@@ -1,0 +1,451 @@
+\chapter{K-means clustering and quantization}
+
+\section{K-means formulation}
+
+Clustering is a fundamental problem in unsupervised learning, where the goal
+is to partition a given dataset into meaningful groups. The intuitive image is
+given in Figure~\ref{fig:ch8-three-class} where initially only the left image
+(un-colored points) is given; the clustering algorithm has to assign each point
+to a cluster which is here figured by a different color. Note that here the
+overall goal is much less specified than in the case of classifications: there
+are no explicit indication of \textbf{how to partition} the points (no training
+set), no \textbf{ground truth to validate the results} and sometimes the number
+of partitions is not known. The task is not always as the Figure~\ref{fig:ch8-three-class}
+may suggest, consult for instance Figure 1.2 where one can see that for some
+examples such as those in first two lines intuitive behavior is \textbf{not}
+recovered by simple clustering algorithms.
+
+One of the most widely used clustering algorithms is K-Means, which seeks to
+minimize intra-cluster variance.
+
+\begin{definition}[K-Means Clustering]
+Given a dataset $\cX = \{x_1, x_2, \ldots, x_n\} \subset \R^d$ and an integer $K$,
+a K-Means clustering of $\cX$ is a partition $C = (C_1, C_2, \ldots, C_K)$ of
+$\cX$\footnote{Recall that $C = (C_1, C_2, \ldots, C_K)$ is said to be a
+partition of $\cX$ if $C_i \cap C_j = \emptyset$ for all $i \le j \le K$ and
+$\cup_{k=1}^{K} C_k = \cX$.} into $K$ disjoint clusters $C_1, C_2, \ldots, C_K$
+such that the within-cluster sum of squared distances to the mean is minimized:
+\begin{equation}\label{eq:ch8-kmeans-obj}
+\min_{C_1, \ldots, C_K} \sum_{k=1}^{K} \sum_{x \in C_k} \norm{x - \mu_k}^2,
+\end{equation}
+where $\mu_k = \frac{1}{|C_k|} \sum_{x \in C_k} x$ is the centroid of the cluster
+$C_k$. Here $\norm{\cdot}$ is the usual Euclidian norm in $\R^d$.
+\end{definition}
+
+\begin{figure}[h]\centering
+% FIGURE PLACEHOLDER (uncomment & replace with \includegraphics when image is available):
+% \fbox{\parbox{0.7\linewidth}{\centering\textit{[Figure from PDF page 116:
+% two scatter plots showing a three-class clustering example. Left: unlabeled
+% blue points in three groups. Right: points colored by cluster (blue, red, green)
+% with dashed Voronoi boundary lines.]}}}
+\caption{Three class clustering example together with its Voronoi partition.
+K-means input: left figure; K-means output: the right figure.}
+\label{fig:ch8-three-class}
+\end{figure}
+
+The explanation for the terminology and for choosing $\mu_k = \frac{1}{|C_k|}
+\sum_{x \in C_k} x$ is given in the following result:
+
+\begin{lemma}
+Let $\mathcal{P} = \{p_1, \ldots, p_n\} \subset \R^d$. The problem
+$\min_{\mu \in \R^d} \sum_{p \in \mathcal{P}} \norm{p - \mu}^2$ has an unique
+minimum $\mu^\star = \frac{1}{n} \sum_{p \in \mathcal{P}} p$ and:
+\begin{equation}\label{eq:ch8-centroid}
+\min_{\mu \in \R^d} \sum_{p \in \mathcal{P}} \norm{p - \mu}^2
+= \sum_{p \in \mathcal{P}} \norm{p - \mu^\star}^2
+= \frac{1}{2n} \sum_{p, p' \in \mathcal{P}} \norm{p - p'}^2
+= n \Var[\mathcal{P}].
+\end{equation}
+\end{lemma}
+
+\begin{proof}
+The proof is obtained by writing the critical point equations or using
+bias-variance decomposition:
+\begin{equation}\label{eq:ch8-bias-var}
+\frac{1}{n} \sum_{p \in \mathcal{P}} \norm{p - \mu}^2
+= \Var[\mathcal{P}] + \norm{\mu - \mu^\star}^2.
+\end{equation}
+\end{proof}
+
+The intuitive vision of a clustering problem is that well defined clusters
+exist, that is, some partition in clusters $C_i$ exits such that distances
+between members of same cluster are small and distances between elements from
+different clusters are large. The result below ensures that the clustering
+procedure will recover intuitive results.
+
+\begin{lemma}
+Assume that the dataset $\cX = \{x_1, x_2, \ldots, x_n\}$ has a partition
+$C_1^\star, \ldots, C_K^\star$ with $C_i^\star \neq \emptyset$ for $i \le K$
+and there exists two constants $d_m$ and $d_M$ such that:
+\begin{align}
+\text{small intra cluster distances: } & \forall k \le K, \forall x, y \in C_k^\star :
+\norm{x - y} \le d_m \label{eq:ch8-intra} \\
+\text{large inter cluster distances: } & \forall k \neq \ell \le K,\ \forall x \in C_k^\star, z \in C_\ell^\star :
+\norm{x - z} \ge d_M. \label{eq:ch8-inter}
+\end{align}
+If $d_M > d_m \sqrt{2n}$ the solution to the K-means problem is exactly the
+partition $C_1^\star, \ldots, C_K^\star$ (up to a relabeling of the classes).
+\end{lemma}
+
+\begin{proof}
+Note that if $x \in C_\ell^\star$ and $C_\ell^\star$ has mean $\mu_\ell^\star$
+then:
+\begin{equation}\label{eq:ch8-mean-bound}
+\norm{x - \mu_\ell^\star}
+= \frac{1}{|C_\ell^\star|} \norm[\bigg]{\sum_{y \in C_\ell^\star} (x - y)}
+\le \frac{1}{|C_\ell^\star|} \sum_{y \in C_\ell^\star} \norm{x - y}
+\le \frac{|C_\ell^\star|}{|C_\ell^\star|} d_m = d_m.
+\end{equation}
+Thus the value of the partition $C_1^\star, \ldots, C_K^\star$ is at most
+$n d_m^2$; on the other hand, if we have a different partition $C_1, \ldots, C_K$
+there will be some $\ell$ and $x \neq y, x, y \in C_\ell$ but such that $x, y$
+are not in the same set of the partition $C^\star$. Denote $\mu_\ell$ the
+centroid of $C_\ell$; the value of the partition $C$ is at least
+$\norm{x - \mu_\ell}^2 + \norm{y - \mu_\ell}^2 \ge \frac{1}{2} \norm{x - y}^2
+\ge \frac{d_M^2}{2}$. Thus, the value of the partition $C$ is larger than
+$d_M^2 / 2$ which, by hypothesis, is strictly larger than $n d_m^2$ which is
+larger than the value of the partition $C^\star$; this proves that $C^\star$
+is the optimal partition.
+\end{proof}
+
+\begin{lemma}[Strict improvement with increasing $K$, different points]
+Let $\cX = \{x_1, \ldots, x_n\} \subset \R^d$ be a finite collection of points.
+Denote, for $\mu = (\mu_1, \ldots, \mu_K)$:
+\begin{equation}\label{eq:ch8-Jmu}
+J(\mu) = \frac{1}{n} \sum_{x \in \cX} \min_{1 \le k \le K} \norm{x - \mu_k}^2,
+\end{equation}
+and let $J_K^\star$ denote the minimal K-means cost, i.e.,
+\begin{equation}\label{eq:ch8-JKstar}
+J_K^\star = \min_{\mu \in (\R^d)^K} J(\mu).
+\end{equation}
+Then
+\begin{enumerate}
+    \item $J_{K+1}^\star \le J_K^\star$, with equality if and only if $\cX$
+    has exactly $K$ distinct points.
+    \item In particular, if $\cX$ has at least $K$ distinct points then the
+    centroids $\mu_1, \ldots, \mu_K$ are all distinct.
+\end{enumerate}
+\end{lemma}
+
+\begin{proof}
+First, note that when we move from $K$ clusters to $K+1$ clusters, we have
+more flexibility in the placement of the centers. Specifically, if we keep
+$\mu_1, \ldots, \mu_K$ as before and place the new center $\mu_{K+1}$ arbitrarily
+the cost for the new solution will not increase. This gives us the inequality
+$J_{K+1}^\star \le J_K^\star$. Next, if the data points are not perfectly
+partitioned into $K$ clusters with zero variance there exists a cluster with
+two distinct points $x_a \neq x_b$; we can split this cluster into two new
+clusters, one containing $x_a$ with centroid in $x_a$ and the other the rest
+of the points with previous centroid. By doing so, we will strictly reduce the
+within-cluster variance for the points that were originally assigned to the
+cluster being split. Hence, the total cost decreases strictly, and we obtain
+the strict inequality $J_{K+1}^\star < J_K^\star$.
+Finally, using the proposition for $K-1$ and $K$ clusters we obtain that the
+points have to be different.
+\end{proof}
+
+\subsection{Optimal Transportation framework}
+
+Assume that $x_i$ are drawn from some distribution $\nu$ with support on space
+$\cX$; we can formulate the K-means clustering problem as an optimal
+transportation problem \cite{turinici25} between the measure $\nu$ and a
+measure with a discrete support of at most $k$ points. One can prove that this
+is equivalent to finding a measurable function $\mathcal{T} : \cX \to \cX$
+with $\mathrm{Im}(\mathcal{T}) \subset \cX$ a discrete set of cardinality at
+most $K$ that minimizes the \emph{total transportation cost}:
+\begin{equation}\label{eq:ch8-OT-cost}
+\E_{X \sim \nu} \norm{X - \mathcal{T}(X)}^2
+= \int_{\cX} \norm{x - \mathcal{T}(x)}^2 \nu(dx).
+\end{equation}
+Here $(x, y) \mapsto \norm{x - y}^2$ is called the transportation cost between
+locations $x$ and $y$. In this formulation, the map $\mathcal{T}$ assigns to
+each point $x$ its corresponding centroid. Since image of $\mathcal{T}$ is
+discrete the map $\mathcal{T}$ cannot be continuous.
+
+\section{K-means algorithm}
+
+To solve problem~\eqref{eq:ch8-kmeans-obj} many approaches can be proposed, but
+historically an iterative refinement technique has been employed. It became so
+popular that it was often called just ``the K-means algorithm''; Lloyd used it
+at Bell Labs as early as 1957 but formalized it only in 1982~\cite{turinici12};
+independent proposals were also developed during that time. The procedure is
+described in Algorithm~\ref{alg:ch8-kmeans} and works by iteratively assigning
+points to centroids and then updating the centroids to be the center of mass
+of the assigned points. Then a new iteration is started.
+
+\begin{algorithm}
+\caption{K-Means Algorithm}\label{alg:ch8-kmeans}
+\begin{algorithmic}[1]
+\State Initialize $K$ cluster centroids $\mu_1, \ldots, \mu_K$ randomly.
+Define a tie break protocol.
+\Repeat
+    \State Assign each point $x \in \cX$ to the closest centroid, apply the
+    tie break protocol if needed; construct a partition $C_1, \ldots, C_K$ of
+    $\cX$ such that:
+    \begin{equation}\label{eq:ch8-assign}
+    \forall k \le K,\ \forall x \in C_k : \norm{x - \mu_k}
+    = \min_{\ell \le K} \norm{x - \mu_\ell}.
+    \end{equation}
+    \State Update each centroid:
+    \begin{equation}\label{eq:ch8-update}
+    \forall k \le K :\ \mu_k = \frac{1}{|C_k|} \sum_{x \in C_k} x.
+    \end{equation}
+\Until{Centroids do not change.}
+\end{algorithmic}
+\end{algorithm}
+
+The algorithm needs a tie-break protocol, that is a way to choose, for some
+point $x$ the cluster to which it belongs in case there are several possible
+candidates; this arises when there exist two centroids $\mu_a$ and $\mu_b$
+with: $\norm{x - \mu_a} = \norm{x - \mu_b} \le \norm{x - \mu_k}$ for all
+$k \le K$. Possible protocols are random choosing or some deterministic rule;
+some examples are given in Table~\ref{tab:ch8-tiebreak}. For instance the
+lowest index rule is naturally obtained if using some `argmin' in Python, as
+`argmin' will return first index in case of ties.
+
+\begin{table}[h]\centering
+\begin{tabular}{@{}ll@{}}
+\toprule
+Method & Description \\
+\midrule
+Arbitrary Assignment & Assign the point randomly to one of the tied clusters. \\
+Lowest Index Rule & Assign the point to the cluster with the lowest index. \\
+Previous Assignment & \begin{tabular}[t]{@{}l@{}}
+If the point was previously assigned to one of the \\
+tied clusters, it remains in that cluster, otherwise \\
+random.
+\end{tabular} \\
+Density-Based & \begin{tabular}[t]{@{}l@{}}
+Assign to the cluster with higher density (i.e., \\
+having more points).
+\end{tabular} \\
+Weighted Probability & Assign probabilistically based on cluster sizes. \\
+Perturbation & Add slight noise to break ties naturally. \\
+\bottomrule
+\end{tabular}
+\caption{Some common tie-breaking methods in K-Means clustering.}
+\label{tab:ch8-tiebreak}
+\end{table}
+
+\begin{theorem}[Convergence]
+Assume a deterministic tie-breaking rule such as the lowest index rule. Then
+the K-Means algorithm terminates in a finite number of iterations.
+\end{theorem}
+
+\begin{proof}
+Assume there are $n$ points and define the `inertia' function:
+\begin{equation}\label{eq:ch8-inertia}
+J(\mu, C) = \frac{1}{n} \sum_{k=1}^{K} \sum_{x \in C_k} \norm{x - \mu_k}^2.
+\end{equation}
+Here $\mu = (\mu_1, \ldots, \mu_K)$ is the $K$-tuple of all centroids in the
+index order and $C = (C_1, \ldots, C_K)$ is the partition written as a $K$-tuple.
+Note that the inertia decreases at every step of the algorithm: this is obvious
+for the assignment phase and for the updating phrase this results from the
+fact that the mean $\bar{y}$ of vectors $y_1, \ldots, y_J$ is precisely the
+unique minimum of $z \mapsto \sum_{j=1}^{J} \norm{y_j - z}^2$, cf.
+Lemma~\ref{eq:ch8-centroid}. Moreover, due to the deterministic tie-breaking
+rule, if at some point the centroid assignment $C$ remains the same from one
+iteration to the next then they will never change again and convergence is
+obtained. Also note that the decrease in inertia is strict, unless convergence
+occurs. Since $C$ lives in a finite set there are bound to be repetitions
+during the iterations of $C$ which indicate convergence.
+\end{proof}
+
+\begin{advancedtopics}
+See \cite{turinici17, turinici3, turinici8} for more in-depth considerations
+on the convergence of the K-means algorithm.
+\end{advancedtopics}
+
+\begin{warning}
+The above result guarantees that the algorithm stops not that it finds the
+global optimum. See Figure~\ref{fig:ch8-init} for an example where poor
+initialization leads to suboptimal results. In practice such cases are not
+exceptional that local (not global) optimums are reached. Note that this
+suboptimal solution is locally stable around this point: take for instance 10
+points in each vertex of the rectangle and assign some of them to the other
+class, the solution will come back to the suboptimal choice. A common cure is
+to run the algorithm several times from several initial points in the hope that
+one may find the true global solution. Other initialization choices include
+Forgy method which randomly chooses $k$ observations from the dataset and uses
+these as the initial means. Modern variants use K-Means++ initialization which
+improves convergence (it is based on a sampling depending on the distance).
+\end{warning}
+
+\begin{example}
+The prototypical situation is when the dataset is a mixture with disjoint
+support. When the supports are far enough, the centroids will be the means of
+each variable in the mixture, see Lemma~\ref{eq:ch8-intra}.
+\end{example}
+
+\subsection{Further Practical Considerations}
+
+Beyond initialization, several aspects determine the algorithm performance:
+\begin{itemize}
+    \item \textbf{Choice of $K$:} The number of clusters $K$ can be determined
+    using the Elbow Method\footnote{In the elbow method we plot how the
+    within-cluster variance decreases as $K$ increases and look for a point,
+    ``elbow'' where adding more clusters doesn't improve much.} or Silhouette
+    Analysis\footnote{In silhouette analysis, for each point, we compute a
+    score comparing its distance to its own cluster and to the nearest other
+    cluster, then average these scores over all points, and we select the
+    number of clusters $K$ that maximizes this average score; this naturally
+    avoids choosing a $K$ that is too large because isolated or tiny clusters
+    lower the silhouette quality.}.
+    \item \textbf{Computational Efficiency:} The standard algorithm has a
+    worst-case exponential complexity, but is efficient in practice. Many
+    variants improve this score by different means including parallelism and
+    various approximations;
+\end{itemize}
+
+\begin{figure}[h]\centering
+% FIGURE PLACEHOLDER (uncomment & replace with \includegraphics when image is available):
+% \fbox{\parbox{0.7\linewidth}{\centering\textit{[Figure from PDF page 122:
+% two side-by-side purple rectangles with four black dots at the corners.
+% Left rectangle: two red centroids $\mu_1$ and $\mu_2$ placed vertically
+% (top-middle and bottom-middle) indicating a sub-optimal initialization.
+% Right rectangle: two red centroids $\mu_1$ and $\mu_2$ placed horizontally
+% (left-middle and right-middle) indicating the optimal solution.]}}}
+\caption{Importance of the initialization in K-means algorithm. We take $n=4$,
+$d=2$, $k=2$; the dataset $\cX$ is the set of black points that form a
+rectangle centered at the origin. \textbf{Left:} sub-optimal initialization.
+The algorithm terminates after one step but the solution is not optimal.
+\textbf{Right:} the optimal solution.}
+\label{fig:ch8-init}
+\end{figure}
+
+\begin{itemize}
+    \item \textbf{Model assumptions and behavior:} The K-means tends to produce
+    clusters of similar size because minimizing the total squared distances
+    induces strong penalization for large distances and thus favors compact,
+    evenly distributed groups, and the Voronoi partition naturally balances
+    the number of points assigned to each centroid.
+\end{itemize}
+
+\section{Other distances}
+
+Similar questions can be asked for different minimization settings. For instance,
+replacing the distance squared in the inertia with just the distance allows to
+formulate the generalized Weber problem:
+
+\begin{definition}[Multi-Weber Problem]
+Given a collection of points $\cX = \{x_1, x_2, \ldots, x_n\} \subset \R^d$
+and an integer $K$, the solution of the generalized Weber problem is a
+$K$-tuple of points (centroids) $\mu = (\mu_1, \mu_2, \ldots, \mu_K)
+\in (\R^d)^K$ that minimize the total sum of distances:
+\begin{equation}\label{eq:ch8-weber}
+\min_{\mu} \sum_{k=1}^{K} \sum_{x \in C_k} \norm{x - \mu_k},
+\end{equation}
+where each point $x \in \cX$ is assigned to the closest centroid $\mu_k$ as
+in~\eqref{eq:ch8-assign}.
+\end{definition}
+
+\begin{remark}
+When $K = 1$ the question is to find $\mu$ that minimizes distance to all
+$x_i$. In one dimension ($d = 1$) this is nothing else than the median and for
+$d > 1$ this is one of the definitions of the median, also called the
+`barycenter' of the points, cf. Exercise 8.3.
+\end{remark}
+
+\begin{advancedtopics}
+The $k=1$, $d=2$, $n=3$ case is called Weber-Fermat problem and has a
+geometric solution:
+
+\begin{lemma}[Fermat-Torricelli]
+If the angles of the triangle formed by $x_1, x_2, x_3$ are all less than
+$120^\circ$, then the solution $\mu_1^\star$ is the unique point such that
+the angles subtended by the segments from $\mu^\star$ to each $x_i$ are equal
+to $120^\circ$.
+\end{lemma}
+
+The problem does not have a closed-form solution for $n \ge 4$, but numerical
+optimization is used instead.
+\end{advancedtopics}
+
+\section{Voronoi Diagrams}
+
+An important related notion is the Voronoi diagram (or Voronoi partition or
+Voronoi map) of a collection of points. We will explain it for the case of
+the plane ($d = 2$). A Voronoi diagram is a partitioning of a plane into
+regions based on the distance to a specified set of points. Given a set of
+distinct points in the plane, the Voronoi diagram divides the plane into
+regions such that each region corresponds to one of the points. The region
+associated with a point consists of all locations that are closer to that
+point than any other. See Figure~\ref{fig:ch8-three-class} for an illustration.
+In other words, for a collection of points $P = \{p_1, p_2, \ldots, p_n\}
+\subset \R^d$ the Voronoi diagram assigns to each point $p_i$ a region $R_i$,
+called cell, with:
+\begin{equation}\label{eq:ch8-voronoi}
+R_i = \{q \in \R^d \mid \norm{q - p_i} < \norm{q - p_j},\ \forall j \neq i\}
+\end{equation}
+where $\norm{q - p_i}$ is the Euclidean distance between a point $q$ and the
+point $p_i$. Voronoi diagrams are used in clustering algorithms where Voronoi
+cells correspond to the clusters around the centroids.
+
+\section{Quantization}
+
+K-means algorithm is an example of \emph{vector quantization}. Vector
+quantization is a technique that maps a distribution of high-dimensional
+vectors in $\R^d$ to a finite collection of discrete representative vectors,
+still in $\R^d$, called a `codebook'. This process is commonly used for data
+compression, clustering, and pattern recognition.
+
+Sometimes a `encoding' function can be provided to associate input vectors to
+a codebook vector; for instance one may construct Voronoi diagram of the
+codebook and map all points in a Voronoi cell to the corresponding cell
+centroid.
+
+\begin{figure}[h]\centering
+% FIGURE PLACEHOLDER (uncomment & replace with \includegraphics when image is available):
+% \fbox{\parbox{0.7\linewidth}{\centering\textit{[Figure from PDF page 124:
+% three images side by side. Left: a smooth full-color rainbow gradient image.
+% Middle: a narrow vertical strip showing four representative colors (the
+% codebook). Right: the same rainbow image quantized to only those four colors,
+% producing visible vertical color bands.]}}}
+\caption{Example of color quantization, see text for details. The left image
+is color-quantized with the four colors in the middle; the result is the
+right image.}
+\label{fig:ch8-color-quant}
+\end{figure}
+
+\begin{example}
+We will take a color quantization example. Consider the image on the left of
+Figure~\ref{fig:ch8-color-quant}. Each color can be expressed as a 3D vector.
+The size of the image is $256 \times 256$ so each pixel requires 8 bits of
+color so 24 bits in all. Instead of storing all this information, we can
+consider replacing the color vectors by the centroids of a clustering
+algorithm. Then each color is replaced by its centroid; if we take $k = 4$ of
+them we obtain the four colors depicted in the middle of the figure. Storing
+such colors is much less expensive (only 2 bits of information each, so a
+compression factor of 12). The resulting image is drawn in the right plot. Of
+course, there is some loss of information but the general idea is preserved.
+Of course, we could also consider more clusters, for instance 8 or 16 colors.
+\end{example}
+
+\begin{example}
+Another example is the quantization of the Brownian motion. The Brownian
+motion can be considered as a probability law on the ensemble of possible
+scenarios of the Brownian motion. This is called the Wiener space view. Suppose
+for instance that the time horizon is $[0, T]$ that we divide into $N$
+segments and only consider times instants $t_n = nh$ where $h = T/N$. Then
+the Brownian motion is reduced to the collection of increments
+$W_{t_{\ell+1}} - W_{t_\ell}$, for $\ell < N - 1$. Any such increment is a
+$\sqrt{h} \cN(0, 1)$ distributed random variable. So finally a scenario can
+be replaced by a standard $N$-dimensional gaussian (up to a factor $\sqrt{h}$).
+If we sample from this law we can consider a large sample and use K-means or
+similar algorithms to find representative scenarios. In general the K-means
+is not the most adapted, see~\cite{turinici23} for details. An example is
+given in Figure~\ref{fig:ch8-brownian}.
+\end{example}
+
+\begin{figure}[h]\centering
+% FIGURE PLACEHOLDER (uncomment & replace with \includegraphics when image is available):
+% \fbox{\parbox{0.7\linewidth}{\centering\textit{[Figure from PDF page 125:
+% two side-by-side line plots of Brownian motion trajectories. Left: many
+% overlapping multicolored Brownian sample paths over time $[0, 60]$, forming
+% a cloud that spreads from $0$ to approximately $\pm 20$. Right: $K=10$
+% representative quantized trajectories on $[0, 1]$ ranging roughly within
+% $[-1, 1]$.]}}}
+\caption{Quantization of brownian motion. Left image: some brownian scenarios.
+Right image: quantization with $N = 128$ time steps and $K = 10$ codebook.}
+\label{fig:ch8-brownian}
+\end{figure}

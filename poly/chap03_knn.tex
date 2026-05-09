@@ -1,0 +1,367 @@
+\chapter{K-nearest neighbors (k-NN)}
+\label{chap:ch3-knn}
+
+\section{Introduction to k-NN}
+\label{sec:ch3-intro}
+
+The \textbf{k-nearest neighbors (k-NN)} algorithm is a simple, yet powerful, method
+used for classification and regression tasks in machine learning. The main idea
+behind k-NN is to predict the output for a given input by looking at the 'k'
+closest training examples in the feature space.
+
+The k-NN algorithm works by finding the 'k' data points that are closest
+to the query point in the feature space. The proximity between data points
+is typically measured using distance metrics, such as \textbf{Euclidean distance} or
+\textbf{Manhattan distance}. Once the closest neighbors are identified, the algo-
+rithm makes predictions based on the majority class (in classification) or
+the average value (in regression) of these neighbors.
+
+\subsection{K-NN procedure}
+\label{sec:ch3-knn-procedure}
+
+The k-NN algorithm consists of the following steps:
+\begin{enumerate}
+  \item \textbf{Select the number of neighbors (k)}: Choose a value for 'k', which
+    represents the number of nearest neighbors to consider for prediction.
+  \item \textbf{Calculate distances}: Compute the distance between the query point
+    and all data points in the training set.
+  \item \textbf{Sort and select the nearest neighbors}: Sort the training data points
+    based on the calculated distances and select the 'k' nearest neighbors.
+  \item \textbf{Predict the output}:
+    \begin{itemize}
+      \item For \textbf{classification}, assign the class label that is most frequent
+        among the 'k' neighbors.
+      \item For \textbf{regression}, calculate the average of the target values of the 'k'
+        neighbors and use it as the prediction.
+    \end{itemize}
+\end{enumerate}
+
+\subsection{Choosing the Value of k}
+\label{sec:ch3-choosing-k}
+
+The value of 'k' is crucial to the performance of the k-NN algorithm. A small
+value of 'k' can make the model sensitive to noise in the data, leading to
+overfitting. A larger value of 'k' makes the model more robust but may lead
+to underfitting if it averages out too many diverse neighbors. Typically, the
+optimal value of 'k' is chosen through cross-validation.
+
+\subsection{Advantages and Limitations}
+\label{sec:ch3-advantages-limitations}
+
+The k-NN algorithm has several advantages:
+\begin{itemize}
+  \item \textbf{Simplicity}: It is easy to understand and implement.
+  \item \textbf{Non-parametric}: No assumptions about the underlying data distribution
+    are made, making it versatile for various data types.
+  \item \textbf{Lazy learning}: There is no explicit training phase. The model learns at
+    the time of prediction.
+\end{itemize}
+However, it also has some limitations:
+\begin{itemize}
+  \item \textbf{Computationally expensive}: The algorithm requires calculating the dis-
+    tance between the query point and all training points, which can be slow for
+    large datasets.
+  \item \textbf{Sensitive to the choice of k and distance metric}: The performance
+    of the algorithm is highly dependent on the selection of 'k' and the distance
+    metric used.
+  \item \textbf{Memory-intensive}: Since the algorithm stores all training data, it requires
+    significant memory, especially for large datasets.
+\end{itemize}
+Despite these limitations, the k-NN algorithm remains a fundamental and
+widely used technique in machine learning for both classification and regression
+problems.
+
+\section{Worked-out Example}
+\label{sec:ch3-worked-out}
+
+Let's illustrate the k-NN algorithm with a simple classification example using
+a small dataset.
+
+\begin{figure}[h]\centering
+% FIGURE PLACEHOLDER (uncomment & replace with \includegraphics when image is available):
+% \fbox{\parbox{0.7\linewidth}{\centering\textit{[Figure from PDF page 27: 2D scatter plot with red points (class 0) at (1,2) and (2,4), blue points (class 1) at (3,3), (5,4), (6,5). A black query point at (4,4) with dashed lines showing distances $d=2$ to (2,4), $d=1$ to (5,4), and $d=1.41$ to (3,3). A small data table shows the coordinates and classes: (1,2)$\to$0, (2,4)$\to$0, (3,3)$\to$1, (5,4)$\to$1, (6,5)$\to$1.]}}}
+\caption{Worked-out example for k-NN.}\label{fig:ch3-worked-out}
+\end{figure}
+
+\textbf{Dataset:} Consider the dataset on Figure~\ref{fig:ch3-worked-out} of points in a 2D space, where
+each point is labeled as either \textbf{Class 0} or \textbf{Class 1}. We want to classify a new
+point $(4, 4)$ based on this dataset using the k-NN algorithm.
+
+\textbf{Step 1: Choose the value of k} For simplicity, let's choose $k = 3$. This
+means we will consider the 3 closest neighbors to make our prediction.
+
+\textbf{Step 2: Calculate the distances} We will calculate the Euclidean distance
+between the new point $(4, 4)$ and each of the points in the dataset. The Eu-
+clidean distance between two points $(x_1, y_1)$ and $(x_2, y_2)$ is given by:
+\begin{equation}\label{eq:ch3-euclidean}
+d = \sqrt{(x_2 - x_1)^2 + (y_2 - y_1)^2}.
+\end{equation}
+The distances are calculated as follows:
+
+\begin{center}
+\begin{tabular}{c|c|c}
+\toprule
+\textit{Point} & Distance to $(4,4)$ & Class \\
+\midrule
+$(1,2)$ & $\sqrt{(4-1)^2 + (4-2)^2} = \sqrt{9+4} = \sqrt{13} \approx 3.61$ & 0 \\
+$(2,4)$ & $\sqrt{(4-2)^2 + (4-4)^2} = \sqrt{4} = 2$ & 0 \\
+$(3,3)$ & $\sqrt{(4-3)^2 + (4-3)^2} = \sqrt{1+1} = \sqrt{2} \approx 1.41$ & 1 \\
+$(5,4)$ & $\sqrt{(4-5)^2 + (4-4)^2} = \sqrt{1+0} = \sqrt{1} = 1$ & 1 \\
+$(6,5)$ & $\sqrt{(4-6)^2 + (4-5)^2} = \sqrt{4+1} = \sqrt{5} \approx 2.24$ & 1 \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\textbf{Step 3: Sort and select the nearest neighbors:} The three points closest
+to $(4,4)$ are: $(5,4)$, distance $= 1$; $(3,3)$, distance $= 1.41$; $(2,4)$, distance $= 2$.
+These three points belong to the classes $1$, $1$ and $0$ respectively.
+
+\textbf{Step 4: Prediction} Since the majority of the nearest neighbors (2 out of 3)
+belong to \textbf{Class 1}, we predict that the point $(4, 4)$ belongs to \textbf{Class 1}. Thus,
+the k-NN algorithm classifies the point $(4, 4)$ as \textbf{Class 1} based on the majority
+class of its 3 nearest neighbors.
+
+\section{Formal description of the k-NN procedure}
+\label{sec:ch3-formal}
+
+We consider a dataset of pairs $\cD = \{(X_i, Y_i), i = 1, \ldots, N\}$ where $X_i \in \cX$ and
+$Y_i \in \cY$. Usually $\cX$ is a subset of $\R^d$ while $\cY$ can either be a discrete set $\cC$
+(when there are several categories) or $\{0,1\}$ for binary classification or $\cY = \R$
+for regression.
+
+\begin{tcolorbox}[advancedbox]
+\textbf{Advanced topics 3.1.} \textit{The coordinates of a point of $x \in \cX$ are called
+``features'' and are supposed to be informative (predictive) on its cor-
+responding $y \in \cY$ (category or value). As we will see latter, when $d$
+is large the performance of the procedure deteriorates. For this reason,
+when the objects live in a high dimensional space a first step is done
+to extract the relevant ``features'' from the data. This will lower the
+dimension and make the input more useful for the goal (regression or
+categorization). PCA or similar techniques can also be invoked.}
+\end{tcolorbox}
+
+Take now $x \in \cX$ a new point to be predicted. We compute all distances
+$\norm{X_i - x}$ for $i \leq N$ and obtain a permutation $\pi(x)$ of $\{1, \ldots, N\}$ that:
+\begin{equation}\label{eq:ch3-permutation}
+\underbrace{\norm{X_{\pi_1(x)} - x}}_{\text{closest to } x}
+\leq \underbrace{\norm{X_{\pi_2(x)} - x}}_{\text{second closest to } x}
+\leq \ldots \leq \underbrace{\norm{X_{\pi_N(x)} - x}}_{\text{furthest from } x}.
+\end{equation}
+
+Suppose that $k$ is a given integer, $k \geq 1$; this is the parameter of the
+algorithm. For the binary regression the prediction is the following:
+\begin{equation}\label{eq:ch3-regression}
+\hat{f}_{\cD}(x) := \frac{1}{k} \sum_{i=1}^{k} Y_{\pi_i(x)}
+\end{equation}
+
+For the binary classification:
+\begin{equation}\label{eq:ch3-classification}
+\hat{f}_{\cD}(x) :=
+\begin{cases}
+1 & \text{if } \mathrm{card}\{i \leq k : Y_{\pi_i(x)} = 1\} \geq \mathrm{card}\{i \leq k : Y_{\pi_i(x)} = 0\} \\
+0 & \text{otherwise}
+\end{cases}
+\end{equation}
+
+where for a set $S$ we denote $\mathrm{card}(S)$ its cardinality. Note that when the number
+of $Y_i$ (among the $k$ nearest neighbors) that belong to class $0$ and $1$ are equal
+this algorithm biases favorably the class $1$. To avoid this bias either use an
+odd value of $k$ or choose at random the ties.
+
+For multi-class settings the function $\hat{f}_{\cD}(x)$ is analogously defined as re-
+turning the class with cardinality larger than any other among the $k$-nearest
+neighbors of $x$. Same remark as before applies about the possibility of ties.
+
+\section{Error estimation with respect to Bayes predictor}
+\label{sec:ch3-error-bayes}
+
+In this section, we present Cover's proof \cite{turinici5} that when $k = 1$ the k-Nearest
+Neighbors (k-NN) algorithm achieves an error rate that is less than twice the
+Bayes error rate in the limit of large datasets.
+
+Recall the notation~(2.1) of the law of $(X, Y)$ and introduce the probability
+densities $f_1, \ldots, f_k$ such that an object in category $i$ gives rise to an observation
+$x$ according to density $f_i$. Formally
+\begin{equation}\label{eq:ch3-fi}
+f_i(x) = \PP_{(X,Y) \sim \nu}[X = x \mid Y = i].
+\end{equation}
+
+Also introduce the (posterior) distributions:
+\begin{equation}\label{eq:ch3-etai}
+\eta_i(x) = \PP_{(X,Y) \sim \nu}[Y = i \mid X = x].
+\end{equation}
+
+To ease notation we will write $\E[\cdot]$ instead of $\E_{(X,Y) \sim \nu}[\cdot]$.
+
+\begin{tcolorbox}[advancedbox]
+\textbf{Advanced topics 3.2.} \textit{Note that if all functions $f_i$ have disjoint sup-
+port the Bayes error will be zero and the following result is trivial and
+not informative. This is the case when a given $x \in \cX$ corresponds to a
+unique category $y \in \cY$.}
+\end{tcolorbox}
+
+We first need a preliminary result:
+
+\begin{lemma}\label{lem:ch3-nearest}
+Let $x$ be a fixed point and assume that with probability one a
+$x \in \cX$ is either a continuity point of all $f_i$, $i \leq M$ or a point of non-zero
+probability measure. Let $X_1, \ldots, X_n$ be i.i.d variables. Denote $Z_n$ the nearest
+neighbor of $x$ from the collection $X_1, \ldots, X_n$. Then $Z_n \xrightarrow{n \to \infty} x$ with probability
+one.
+\end{lemma}
+
+\begin{proof}
+We accept the result which is somehow technical, see \cite[page 23]{turinici5} for
+details.
+\end{proof}
+
+We will denote by $M$ the number of categories, $R^*$ the risk of the Bayes
+estimator, $R_n$ the risk of the k-NN estimator for the i.i.d. variables $X_1, \ldots,$
+$X_n$ and $R = \lim_{n \to \infty} R_n$.
+
+\begin{theorem}\label{thm:ch3-cover}
+We take $k = 1$ (one nearest neighbor). Assume that with
+probability one a $x \in \cX$ is either a continuity point of all $f_i$, $i \leq M$ or a
+point of non-zero probability measure. Then when the loss function is $l_{binary}$
+in~(2.6):
+\begin{equation}\label{eq:ch3-cover-bound}
+R^* \leq R \leq R^* \left( 2 - \frac{M}{M-1} R^* \right).
+\end{equation}
+\end{theorem}
+
+\begin{tcolorbox}[advancedbox]
+\textbf{Advanced topics 3.5.} \textit{The theorem works with same proof for sepa-
+rable metric spaces.}
+\end{tcolorbox}
+
+\begin{proof}
+We will prove the assertion for $M = 2$ categories and refer to \cite[pages 25-26]{turinici5} for the general case. Denote $\eta(x) = \eta_1(x)$, cf. equation~\eqref{eq:ch3-etai}.
+From~(2.12) we know that the Bayes risk is: $R^* = \E[\ind_{Y \neq f_{B_0}(X)}] =
+\E[\min\{\eta(X), 1 - \eta(X)\}]$. On the other hand invoking Lemma~\ref{lem:ch3-nearest} the near-
+est neighbor of $X$ tends to $X$ so by continuity hypothesis (the precise use
+of the continuity requires some details that can be found in \cite[page 24]{turinici5})
+the variable $Y_{\pi_1(X)}$ follows a Bernoulli distribution with parameter $\eta(X)$.
+We obtain the risk
+\begin{align}
+R &= \E[\ind_{Y_{\pi_1(X)} \neq Y}] = \E\left[\E[\ind_{Y_{\pi_1(X)} \neq Y} \mid X]\right] = \E\left[\PP[Y_{\pi_1(X)} \neq Y \mid X]\right] \notag \\
+  &= \E\left[\sum_{y \in \{0,1\}} \PP[Y = y, Y_{\pi_1(X)} = 1 - y \mid X]\right] \label{eq:ch3-risk-sum}
+\end{align}
+Note that conditional to $X$, variables $Y$ and $Y_{\pi_1(X)}$ are independent as
+$\pi_1(X)$ depend on the given sample that does not involve $X$ and $Y$. We can
+thus continue
+\begin{align}
+R &= \E\left[\sum_{y \in \{0,1\}} \PP[Y = y \mid X] \cdot \PP[Y_{\pi_1(X)} = 1 - y \mid X]\right] \notag \\
+  &= \E\left[2 \eta(X)(1 - \eta(X))\right]. \label{eq:ch3-risk-final}
+\end{align}
+Denote $R(X) = \min\{\eta(X), 1 - \eta(X)\}$. Since $\E[2\eta(X)(1 - \eta(X))] =
+\E[2R(X)(1 - R(X))]$ by concavity we obtain $R \leq 2\E[R(X)] \cdot (1 -
+\E[R(X)]) = 2R^*(1 - R^*)$ hence the conclusion.
+\end{proof}
+
+\begin{remark}\label{rem:ch3-error-rate}
+This proof shows that the k-NN algorithm's error rate is at
+most twice the Bayes error, making it a robust non-parametric classifier.
+As $k$ increases, the error rate will decrease.
+\end{remark}
+
+\section{Higher dimensions}
+\label{sec:ch3-higher-dim}
+
+\subsection{Datasets: dimension versus number of objects}
+\label{sec:ch3-datasets}
+
+The k-NN works in a special regime where the notion of `closeness' plays
+a role. To understand it better we will need first some information on the
+modern datasets. Each dataset $\cD$ is a collection of $n_{\cD}$ objects and each object
+lives in a space with $d_{\cD}$ dimensions. We plot in figure~\ref{fig:ch3-datasets} this information
+for some modern datasets. The most striking fact is that for recent datasets
+such as those in 'NLP' and 'video' categories the number of objects is \textbf{smaller}
+than the dimension of a single object while for historical datasets (the 'stat'
+category) the number of objects is roughly two orders of magnitude higher
+than the dimension of an object. This fact has far reaching implication that
+will be described in the next sections.
+
+\begin{figure}[h]\centering
+% FIGURE PLACEHOLDER (uncomment & replace with \includegraphics when image is available):
+% \fbox{\parbox{0.7\linewidth}{\centering\textit{[Figure from PDF page 32: Log-log scatter plot of Number of Objects in Dataset (y-axis, $10^0$ to $10^8$) versus Dimension of Object (x-axis, $10^0$ to $10^{12}$). Image datasets plotted: MNIST, CIFAR-10, SVHN, ImageNet, COCO, PASCAL VOC. Stat datasets: Iris, Wine, Boston Housing, Breast Cancer, Digits. NLP datasets: Wikipedia, IMDB Reviews, Enwik8, Common Crawl, OpenWebText. Video datasets: Kinetics-700, UCF101.]}}}
+\caption{The number of objects versus the dimension of a single object
+for historical datasets (label 'stat') and recent ones (labels 'image', 'video',
+'NLP').}\label{fig:ch3-datasets}
+\end{figure}
+
+\subsection{Information contained in the distance}
+\label{sec:ch3-info-distance}
+
+Consider now the following question: suppose we take at random points in the
+$d$ dimensional unit cube. As argued in the previous section taking $n$ points with
+$n \sim d$ is maybe a good way to go. We compute the following metric; for each
+point we take the distance to its nearest neighbor and rescale it by the median
+of all distances between the all points in the set. We plot in figure~\ref{fig:ch3-min-distance} the
+evolution of this normalized minimum distance with respect to the dimension.
+It is seen that the minimum distance is informative for low dimensions i.e., is
+different from the median distance, but as dimension increases the minimum
+distance approaches the median distance so the notion of nearest neighbor
+looses any meaning, all points are almost equally spaced. This means that
+methods based on distances may work poorly in practice.
+
+\begin{figure}[h]\centering
+% FIGURE PLACEHOLDER (uncomment & replace with \includegraphics when image is available):
+% \fbox{\parbox{0.7\linewidth}{\centering\textit{[Figure from PDF page 33: Line plot showing the (rescaled) minimum distance as a function of dimension (x-axis from $10^0$ to $10^3$, log scale; y-axis from 0.0 to 1.0). The min rescaled distance curve rises from about 0.2 at dimension 1 toward 1.0 at dimension $10^3$, with a shaded 99\% confidence interval band.]}}}
+\caption{The distance to nearest neighbor (renormalized with respect to the
+median distance of all points) as function of dimension. We take 1000 different
+simulations, $N = 100$ points in each simulation and plot the empirical 99\%
+confidence interval too.}\label{fig:ch3-min-distance}
+\end{figure}
+
+\begin{tcolorbox}[advancedbox]
+\textbf{Advanced topics 3.7.} \textit{This can be formalized by computing, for a
+$d$-dimensional normal sampling, the variance of the distance (squared)
+between $d$ points and compare with the mean value of the distance.}
+\end{tcolorbox}
+
+\begin{tcolorbox}[advancedbox]
+\textbf{Advanced topics 3.8.} \textit{On the contrary, distance to hyper-planes be-
+haves well with increasing dimension; this remark motivates other suc-
+cessful statistical approaches.}
+\end{tcolorbox}
+
+Not all is lost. It may still be that some dimensions are more important
+than the other and a classification may still be possible, as illustrated in the
+next section. For instance, when data is on a curve in a very high dimensional
+space this the distance between the points is relevant again.
+
+\subsection{Curse of dimensionality}
+\label{sec:ch3-curse-dim}
+
+We investigate here how the dimension of the data influences the quality of the
+k-NN procedure. Consider a binary classification with data $x = (x_1, \ldots, x_d) \in
+[-1/2, 1/2]^d$ following a uniform distribution on the cube and label $y$ equal to
+$1$ if $x_1 \geq 0$ and $0$ otherwise. In this case there exists indeed a low dimensional
+decision criterion but also dimensions that do not carry any information where
+data is random.
+
+The Bayes estimator is simply $\ind_{x_1 \geq 0}$ and has null error. Let us see how
+k-NN performs when the dimension $d$ increases. Note that even when $d = 1$
+the error is not always null but vanishes when the number $n$ of samples goes to
+infinity. When $d$ is large $n$ will not be enough to sample well the whole cube.
+So in this case the classification is possible but using distances is not a good
+way to reach it. This will only work when there is low noise and data lies in a
+low dimensional manifold.
+
+\begin{figure}[h]\centering
+% FIGURE PLACEHOLDER (uncomment & replace with \includegraphics when image is available):
+% \fbox{\parbox{0.7\linewidth}{\centering\textit{[Figure from PDF page 34: Line plot of \% correct labels (y-axis from 50 to 100) versus dimension (x-axis, log scale from 1 to 200). Blue curve: k-NN (median) dropping from ~100\% at $d=1$ toward ~60\% at $d=200$, with shaded $Q_1$-$Q_3$ range. Red horizontal line: random choice at 50\%.]}}}
+\caption{k-NN performance with respect to the dimension. We take in each
+case $N = 100$ points and $300$ independent datasets.}\label{fig:ch3-curse-dim}
+\end{figure}
+
+\section{Computer lab : k-NN}
+\label{sec:ch3-computer-lab}
+
+\begin{tcolorbox}[remarkbox]
+\textbf{Exercise 3.1} (accuracy vs dimension)\textbf{.} \textit{Test kNN for the Iris, MNIST
+and CIFAR10 datasets (attention the last one is resource intensive).
+You should obtain more than 90\% accuracy on first two but only a third
+for the last one. Can you explain? Obtain some statistics involving the
+classes of the nearest $k$ neighbors for objects in each dataset.}
+\end{tcolorbox}

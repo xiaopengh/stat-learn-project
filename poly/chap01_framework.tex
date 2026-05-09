@@ -1,0 +1,851 @@
+\chapter{Examples and machine learning framework}
+\label{sec:ch1-intro}
+
+The object of this book is to present several machine learning procedures
+providing at the same time context on the applicability domain so that the
+reader will acquire an understanding of what algorithm is best for any given
+practical situation.
+
+We will start with the simplest one, namely the k-nearest-neighbors in
+order to see where is the origin of the machine learning 'magic'; this will allow
+to distinguish the distance based methods (usually relevant in low dimensions)
+from protocols used in higher dimensions. Then we continue with ridge and
+lasso regularization, naive Bayes estimators and neural networks; we close with
+the K-means algorithm.
+
+In order to situate our framework, the rest of this section is devoted to
+some examples of applications. First we give a list and then make clear the
+mathematical framework and the steps taken to address a machine learning
+task.
+
+\section{Examples of applications}
+\label{sec:ch1-examples}
+
+\subsection{Image Recognition and Computer Vision}
+\label{sec:ch1-imgrec}
+
+Machine learning has revolutionized the field of computer vision, enabling systems
+to interpret and analyze visual data effectively. Several applications of
+computer vision and their corresponding use cases are presented in Table~\ref{tab:ch1-cv}.
+These include object detection and recognition, which identifies and classifies
+objects in images or videos, enabling use cases such as autonomous driving
+and retail inventory management through models like YOLO and Faster R-CNN.
+Facial recognition is employed for identity verification in smartphones,
+social media tagging, and law enforcement. In healthcare, medical image analysis
+leverages convolutional neural networks to interpret scans (e.g., X-rays,
+MRIs) for disease detection. Image segmentation supports pixel-level classification
+for tasks such as road detection in autonomous vehicles and organ
+delineation in medical imaging, using architectures like U-Net and Mask R-CNN.
+Finally, super-resolution and image enhancement improve image quality
+for applications ranging from satellite imaging to consumer photo restoration,
+often utilizing generative models such as SRGAN.
+
+\begin{table}[h]
+\centering
+\begin{tabular}{p{0.28\linewidth} p{0.62\linewidth}}
+\toprule
+\textbf{Application} & \textbf{Description and Use Cases} \\
+\midrule
+Object Detection and Recognition &
+Identifies and classifies objects within images or videos. Used
+in self-driving cars (detecting pedestrians, vehicles, traffic
+lights), retail (inventory management), and leveraging models like YOLO and Faster R-CNN. \\
+\midrule
+Facial Recognition &
+Identifies or verifies individuals based on facial features. Applications
+include smartphone unlocking, social media photo
+tagging (e.g., Facebook), and law enforcement for criminal
+investigations. \\
+\midrule
+Medical Image Analysis &
+Examines medical scans (X-rays, MRIs, CT scans) to detect
+diseases or abnormalities. Assists in diagnosing conditions
+like cancer using models like Convolutional Neural Networks
+(CNNs). \\
+\midrule
+Image Segmentation &
+Divides images into meaningful parts for pixel-level classification.
+Used in autonomous vehicles (road and obstacle
+detection) and healthcare (highlighting organs or brain tumors in scans) with algorithms like U-Net and Mask R-CNN. \\
+\midrule
+Super-Resolution and Image Enhancement &
+Improves image quality by increasing resolution or restoring
+damaged areas. Applications include satellite imaging and
+consumer tools for photo enhancement using models like SRGAN. \\
+\bottomrule
+\end{tabular}
+\caption{Applications of Machine Learning in Computer Vision.}
+\label{tab:ch1-cv}
+\end{table}
+
+\subsection{Natural Language Processing (NLP)}
+\label{sec:ch1-nlp}
+
+Natural Language Processing (NLP) encompasses a range of techniques that
+enable machines to understand, interpret, and generate human language. The
+Table~\ref{tab:ch1-nlp} summarizes key applications of NLP and their corresponding use
+cases. Text generation and language modeling automatically produce human-like
+text from prompts using models such as GPT, powering tools like AI writing
+assistants, email automation, and creative writing. Sentiment analysis classifies
+text as positive, negative, or neutral, supporting social media monitoring,
+product review evaluation, and customer feedback analysis through models like
+BERT and LSTM. Machine translation enables multilingual communication by
+translating text between languages, as seen in services like Google Translate,
+leveraging Transformer architectures for improved accuracy. Named Entity
+Recognition (NER) extracts and categorizes entities such as names, dates, and
+locations, aiding information retrieval, legal document analysis, and healthcare
+data processing. Finally, speech recognition and conversational AI convert
+spoken language to text and generate responses, forming the backbone
+of virtual assistants (e.g., Siri, Alexa) and customer service chatbots, using
+advanced models like Transformers for text understanding and WaveNet for
+speech synthesis.
+
+\begin{table}[h]
+\centering
+\begin{tabular}{p{0.28\linewidth} p{0.62\linewidth}}
+\toprule
+\textbf{Application} & \textbf{Description and Use Cases} \\
+\midrule
+Text Generation and Language Modeling &
+Automatically generates human-like text based on prompts,
+using models like GPT. Applications include AI writing assistants
+(e.g., ChatGPT), automatic email generation, and
+creative writing. \\
+\midrule
+Sentiment Analysis &
+Determines the sentiment (positive, negative, or neutral) in
+text. Used in social media monitoring, product reviews, and
+customer feedback analysis, leveraging models such as BERT
+and LSTM. \\
+\midrule
+Machine Translation &
+Translates text between languages, as seen in tools like
+Google Translate. Transformer-based models enhance translation
+accuracy, facilitating international communication,
+global business, and tourism. \\
+\midrule
+Named Entity Recognition (NER) &
+Identifies and classifies entities (e.g., names, dates, locations)
+in text. Applications include information extraction,
+legal text analysis, healthcare (e.g., extracting medical conditions),
+and enhancing search engine capabilities. \\
+\midrule
+Speech Recognition and Conversational AI &
+Converts spoken language to text (speech-to-text) and generates
+meaningful responses (text-to-speech). Used in virtual
+assistants (e.g., Siri, Alexa) and chatbots for customer support,
+leveraging Transformer models for text understanding
+and WaveNet for speech generation. \\
+\bottomrule
+\end{tabular}
+\caption{Applications of Natural Language Processing (NLP).}
+\label{tab:ch1-nlp}
+\end{table}
+
+\subsection{Generative AI}
+\label{sec:ch1-genai}
+
+Generative AI leverages machine learning models to create new content across
+various domains, from images and text to music and 3D objects, see Table~\ref{tab:ch1-genai}
+for some examples of use. Image generation creates realistic visuals or artistic
+content from text or random noise using models such as GANs, powering
+tools like DeepArt and DALL-E and enabling deepfake video synthesis. Text
+generation produces coherent, context-aware text through language models
+like GPT, supporting AI-driven content creation, writing assistants, code generation
+(e.g., GitHub Copilot), and conversational agents. Music and audio
+generation involves composing music or generating synthetic speech and sound
+effects, with models like OpenAI's Jukebox and AIVA for music, and WaveNet
+for high-quality text-to-speech in virtual assistants and audiobooks. Data augmentation
+for training leverages synthetic data generation, often via GANs, to
+improve model performance in scenarios with limited real-world data, particularly
+in image recognition tasks. Lastly, 3D object and scene generation creates
+virtual environments and models for gaming, simulations, VR, and AR, using
+techniques such as 3D GANs to produce realistic objects and immersive worlds.
+
+\begin{table}[h]
+\centering
+\begin{tabular}{p{0.28\linewidth} p{0.62\linewidth}}
+\toprule
+\textbf{Application} & \textbf{Description and Use Cases} \\
+\midrule
+Image Generation &
+Creates realistic images or art from text or random noise
+using models like GANs. Applications include tools like
+DeepArt and DALL-E for art creation, as well as deepfake
+video generation for realistic faces or scenes. \\
+\midrule
+Text Generation &
+Produces coherent and contextually relevant text using language
+models like GPT. Use cases include AI-driven content creation, writing assistants (e.g., Grammarly), automatic
+code generation (e.g., GitHub Copilot), and chatbot
+dialogues. \\
+\midrule
+Music and Audio Generation &
+Composes music or generates synthetic speech and sound
+effects. Models like OpenAI's Jukebox and AIVA are used
+for creating music, while WaveNet powers high-quality text-to-speech
+for virtual assistants and audiobooks. \\
+\midrule
+Data Augmentation for Training &
+Generates synthetic data to enhance machine learning model
+performance, especially in scenarios with limited real data.
+GANs are used to create new data points, improving model
+accuracy in tasks like image recognition. \\
+\midrule
+3D Object and Scene Generation &
+Creates 3D models and virtual environments for gaming, simulations,
+VR, and AR applications. Models like 3D GANs
+are applied in video game design and movie special effects to
+generate realistic objects and virtual worlds. \\
+\bottomrule
+\end{tabular}
+\caption{Applications of Generative AI.}
+\label{tab:ch1-genai}
+\end{table}
+
+\subsection{Examples: Game Play and Robot Training}
+\label{sec:ch1-rl}
+
+Machine learning and reinforcement learning (RL) have transformed gameplay
+and robotics, enabling advanced training for AI agents and robots. Table~\ref{tab:ch1-rl}
+contains a description of some key applications: Gameplay and AI for games
+uses RL to achieve expert-level performance in titles like Chess, Go, and Dota
+2 (e.g., AlphaGo, OpenAI Five) and to create adaptive NPC behavior. Robot
+training and control applies RL for locomotion, object manipulation, and navigation
+with tools like OpenAI Gymnasium and Mujoco, as seen in Boston
+Dynamics' Spot. In autonomous vehicles, RL supports safe navigation and
+decision-making for self-driving cars used by companies such as Waymo and
+Tesla. Personalized game recommendations enhance engagement by adjusting
+difficulty and suggesting challenges based on player behavior. Finally, sim-to-real
+transfer enables robots to learn in simulations and apply skills in real-world
+tasks, reducing cost and risk in areas like drone control and industrial
+automation.
+
+\begin{table}[h]
+\centering
+\begin{tabular}{p{0.28\linewidth} p{0.62\linewidth}}
+\toprule
+\textbf{Application} & \textbf{Description and Use Cases} \\
+\midrule
+Gameplay and AI for Games &
+RL trains AI to play games like Chess, Go, and Dota 2 at
+expert levels (e.g., AlphaGo, OpenAI Five). It is also used
+for adaptive NPC behavior in game development. \\
+\midrule
+Robot Training and Control &
+RL teaches robots tasks such as walking, object manipulation,
+and navigation using tools like OpenAI Gymnasium
+and Mujoco. Examples include Boston Dynamics' Spot. \\
+\midrule
+Autonomous Vehicles &
+RL trains self-driving cars for safe navigation, obstacle avoidance,
+and decision-making. Companies like Waymo and
+Tesla rely on RL for vehicle optimization. \\
+\midrule
+Personalized Game Recommendations &
+RL personalizes in-game experiences by adjusting difficulty
+or suggesting challenges based on player behavior, enhancing
+engagement in games like Minecraft and Fortnite. \\
+\midrule
+Sim-to-Real Transfer in Robotics &
+RL enables robots to learn in simulations and apply learned
+skills in real-world tasks, reducing risks and costs. Applications
+include drone control and industrial robotics. \\
+\bottomrule
+\end{tabular}
+\caption{Applications of RL in Games and Robotics.}
+\label{tab:ch1-rl}
+\end{table}
+
+\subsection{Network-Based Recommendations and Relationships}
+\label{sec:ch1-graph}
+
+Graph-based techniques leverage the interconnected structure of data to provide
+insights and improve applications cf. Table~\ref{tab:ch1-graph}. Recommender systems
+use Graph Neural Networks (GNNs) to model user-item relationships, improving
+recommendations on platforms like Netflix and Amazon. Social network
+analysis applies GNNs to user connections for better ad targeting and content
+delivery. In fraud detection, transaction networks modeled as graphs help
+identify suspicious patterns for financial security. Finally, knowledge graphs
+represent entities and relationships to enhance search engines such as Google,
+enabling richer and more relevant results.
+
+\begin{table}[h]
+\centering
+\begin{tabular}{p{0.28\linewidth} p{0.62\linewidth}}
+\toprule
+\textbf{Application} & \textbf{Description and Use Cases} \\
+\midrule
+Recommender Systems &
+GNNs analyze user-item relationships to enhance recommendations
+on platforms like Netflix, Spotify, and Amazon by
+modeling interactions as graphs. \\
+\midrule
+Social Network Analysis &
+GNNs analyze user connections on platforms like Facebook
+and Twitter to improve ad targeting and content delivery by
+modeling user interactions. \\
+\midrule
+Fraud Detection &
+Transaction networks modeled as graphs help financial institutions
+detect unusual patterns and relationships indicative
+of fraudulent activities. \\
+\midrule
+Knowledge Graphs &
+Graphs representing entities and their relationships enhance
+search engines like Google, enabling richer and more relevant
+search results. \\
+\bottomrule
+\end{tabular}
+\caption{Applications of Graph-Based Techniques.}
+\label{tab:ch1-graph}
+\end{table}
+
+\section{Summary: types of Machine Learning}
+\label{sec:ch1-summary}
+
+Summarizing the previous examples, machine learning can be broadly categorized
+into three types (combinations or extensions are allowed):
+\begin{itemize}
+  \item \emph{supervised learning,} where models are trained on labeled data to learn mappings
+  from inputs to outputs (e.g., predicting house prices from features);
+  \item \emph{unsupervised learning,} where models find hidden patterns or structures in
+  unlabeled data (e.g., clustering customers based on behavior); also in this denomination
+  are generative models that create new objects similar to existing
+  ones;
+  \item \emph{reinforcement learning,} where agents learn to make sequential decisions by
+  interacting with an environment to maximize a reward signal (e.g., training
+  robots to navigate a maze).
+\end{itemize}
+
+\section{Supervised learning example: MNIST classification}
+\label{sec:ch1-mnist}
+
+The MNIST (Modified National Institute of Standards and Technology) dataset
+is a widely used benchmark dataset in the field of machine learning and computer
+vision, particularly for evaluating image classification algorithms \cite{turinici6}.
+It consists of handwritten digits and serves as a fundamental dataset for developing
+and testing various models; there are $N = 70{,}000$ images in the dataset,
+which are usually split into two sets: $60{,}000$ training images and $10{,}000$ testing
+images. Each image is a $28 \times 28$ matrix representing the pixel values of the
+images, so the dimension of each data point is $d = 28 \times 28 = 784$; often this is
+presented as flattened into a vector in $\R^{784}$.
+
+Each image $X_i \in \R^{784}$ represented as a vector, contains the pixel intensity
+values: $X_{ij} \in \{0, 1, \ldots, 255\}$ denotes the pixel value at the $j$-th position of
+the $i$-th image. Often, the pixel values are divided by $255$ so that one obtains
+values in $X_i \in [0,1]^{784}$. The image $X_i$ comes with a label $Y_i \in \{0, 1, 2, \ldots, 9\}$
+representing the digit depicted in the image. Figure~\ref{fig:ch1-mnist} shows a selection
+of $15$ images and their labels from the MNIST dataset arranged in a 3x5
+grid. The goal is, given a handwritten image in input, to recognize the figure
+this image is supposed to represent; mathematically, we look for a function
+$f : [0,1]^{784} \to \{0, \ldots, 9\}$.
+
+\begin{figure}[h]\centering
+% FIGURE PLACEHOLDER (uncomment & replace with \includegraphics when image is available):
+% \fbox{\parbox{0.7\linewidth}{\centering\textit{[Figure from PDF page 7: a 3x5 grid of sample MNIST handwritten digits with labels above each image (5, 0, 4, 1, 9, 2, 1, 3, 1, 4, 3, 5, 3, 6, 1).]}}}
+\caption{Sample images from the MNIST dataset. Each image represents a handwritten digit.}
+\label{fig:ch1-mnist}
+\end{figure}
+
+Applications can range from postal code recognition to note taking or optical
+character recognition of documents.
+
+\section{Unsupervised learning example: clustering}
+\label{sec:ch1-clustering}
+
+Clustering is an unsupervised learning technique that groups data points into
+clusters based on their similarity. The data is in a form of objects $X_i$, $i \le N$.
+The number $n_c$ of clusters can be specified by the user or proposed by the
+algorithm. The output is thus possibly a number of clusters $n_c$ and a label
+$Y_i \in \{1, \ldots, n_c\}$ for each dataset point $X_i$. The figure~\ref{fig:ch1-clustering}, adapted from scikit-learn,
+illustrates the performance of various clustering algorithms on datasets
+with different characteristics; all inputs are vectors $X_i \in \R^2$.
+
+\begin{figure}[h]\centering
+% FIGURE PLACEHOLDER (uncomment & replace with \includegraphics when image is available):
+% \fbox{\parbox{0.7\linewidth}{\centering\textit{[Figure from PDF page 8: scikit-learn comparison grid of clustering algorithms (MiniBatch KMeans, Affinity Propagation, MeanShift, Spectral Clustering, Ward, Agglomerative Clustering, DBSCAN, HDBSCAN, OPTICS, BIRCH, Gaussian Mixture) applied to several 2D datasets (rings, moons, blobs, anisotropic, varied-variance, uniform). Labels are shown as colors.]}}}
+\caption{Comparison of clustering algorithms on different datasets (source: \cite{turinici14,turinici17}). Each line is a different dataset, each column a different algorithm. Labels $Y_i$ are depicted as colors. For more details on clustering see Chapter~8.}
+\label{fig:ch1-clustering}
+\end{figure}
+
+\section{General Procedure of Supervised Learning}
+\label{sec:ch1-procedure}
+
+We now describe the important objets and steps required in order to implement
+a supervised learning procedure.
+
+\subsection{Dataset}
+\label{sec:ch1-dataset}
+
+A crucially important object is the input data used to train the algorithm.
+In supervised learning, the data source can be formalized as an ensemble of
+pairs of input features $X$ and corresponding output labels $Y$. The dataset $\cD$
+is represented as:
+\begin{equation}\label{eq:ch1-dataset}
+\cD = \{(X_i, Y_i)\}_{i=1}^{N} \quad \text{where} \quad X_i \in \cX,\; Y_i \in \cY.
+\end{equation}
+
+\begin{example}
+$X$: Measurements of house features (e.g., size, number of
+rooms), $Y$: House prices.
+\end{example}
+
+\begin{example}
+$X$: Characteristics of patients (e.g., age, blood pressure), $Y$:
+Diagnosis outcomes.
+\end{example}
+
+\subsection{Feature Engineering}
+\label{sec:ch1-features}
+
+Once the raw data is given an optional step is transforming this data to obtain
+the good input format for the procedure. We already gave an example with transforming a MNIST image gray levels by mapping the value set
+$\{0, 1, \ldots, 255\}$ to $\{0, 1/255, \ldots, 1\} \subset [0,1]$. In general such a procedure falls
+within the denomination of \emph{feature engineering}. Feature engineering involves
+transforming raw data into meaningful features to improve model performance.
+Mathematically, this can be represented as a mapping $\phi : \cX \to \cX'$. Some examples include:
+\begin{itemize}
+  \item Polynomial features: $\phi(x) = [x, x^2, x^3, \ldots]$
+  \item Normalization: $\phi_{\mu,\sigma}(x) = \frac{x-\mu}{\sigma}$
+  \item One-hot encoding for categorical variables: $\phi(\text{category}) = [0, 1, 0, \ldots]$
+  \item Log transformation: $\phi(x) = \log(x)$.
+\end{itemize}
+
+\subsection{Construction of the Predictor}
+\label{sec:ch1-predictor}
+
+The output of the model is a predictor mapping that allows to propose a
+classification outcome for new objects not in the dataset. The predictor $\hat{f}$ is
+constructed by selecting a model $\mathcal{M}$ and fitting it to the training data $\cD$. To
+evaluate how well the model predicts the target values, we use a \emph{loss function},
+which measures the discrepancy between the true output $y$ and the predicted
+output $\hat{y}$. A smaller loss indicates better predictions. The model parameters
+are estimated by minimizing a loss function $l(y, \hat{y})$ a process commonly referred
+to as \emph{training} the model.
+
+\begin{example}
+\textbf{Linear regression} is a fundamental method in supervised
+learning that models the relationship between input features and a continuous
+output by assuming a linear dependency: $\mathcal{M}(X; \beta) = X\T \beta$.
+\[
+\hat{\beta} = \argmin_{\beta} \frac{1}{N} \sum_{i=1}^{N} l(Y_i, \mathcal{M}(X_i; \beta))
+\]
+\end{example}
+
+\begin{example}
+\textbf{Decision tree} is a non-parametric model that partitions the
+feature space into regions using hierarchical rules, enabling flexible classification
+or regression without assuming linearity. Here $\mathcal{M}(X; \theta)$ is a tree-based
+model with parameters $\theta$.
+\end{example}
+
+\subsection{Model Evaluation}
+\label{sec:ch1-evaluation}
+
+Model evaluation assesses how well the predictor performs on unseen data.
+This is done using metrics such as accuracy:
+\begin{equation}\label{eq:ch1-accuracy}
+\text{Accuracy} = \frac{\sum_{i=1}^{N} \ind_{\hat{y}_i = y_i}}{N},
+\end{equation}
+and by checking for common issues like \emph{overfitting} and \emph{underfitting}. Overfitting
+occurs when the model performs well on training data but poorly on new
+data, while underfitting means the model performs poorly on both training and new
+data. These checks are crucial for ensuring \emph{generalization}, which refers to the
+model's ability to maintain good performance on data it has not seen before.
+
+\begin{tcolorbox}[advancedbox]
+\textbf{Advanced topics 1.5.} \textit{To mitigate overfitting and underfitting, practitioners
+often use techniques such as cross-validation to assess accuracy,
+compare training and validation errors to detect overfitting, evaluate
+performance on a separate test set, and monitor learning curves to
+identify signs of underfitting.}
+\end{tcolorbox}
+
+\subsection{Model Interpretability}
+\label{sec:ch1-interpretability}
+
+Model interpretability involves understanding how the model makes predictions
+and why certain outputs are produced. This is important for trust, debugging,
+and compliance in many applications. Interpretability can be achieved
+through various techniques. For instance, in a linear regression model, the
+coefficients $\beta_j$ indicate the importance and direction of influence of feature $j$
+on the prediction. For more complex models, such as decision trees or neural
+networks, interpretability may involve feature importance scores, visualization
+of decision paths, or tools like SHAP and LIME.
+
+Another practical consideration is the trade-off between model complexity
+and computational cost. Simpler models, when sufficient, are often preferable
+for efficiency and transparency. For example, there is no need to deploy a large
+language model (LLM) when a linear regression provides accurate results for
+the task at hand!
+
+\chapter[Useful theoretical objects]{Useful theoretical objects: predictors, loss functions, bias, variance}
+\label{sec:ch2-intro}
+
+This chapter introduces a set of theoretical objects that will be used throughout
+the book, including predictors, loss functions, and the notions of bias and
+variance. Together, these concepts form the basic framework for statistical
+learning, allowing us to formalize prediction tasks, quantify errors, and analyze
+the behavior of learning algorithms. In particular, the bias-variance
+decomposition offers insight into the trade-offs that govern model complexity
+and predictive performance.
+
+\section{Predictors, Loss functions, Bayes predictor}
+\label{sec:ch2-predictors}
+
+Suppose that on $\cX$ and $\cY$ are defined some probabilistic setting, for instance
+when $\cX = \R^d$ we take the Borel sigma algebra $\mathcal{B}(\R^d)$ and associated probability
+measure. When $\cY = \{0,1\}$ the sigma algebra is $\mathcal{P}(\cY)$\footnote{Here and in the following for any discrete set $\mathcal{S}$ we denote $\mathcal{P}(\mathcal{S})$ the ensemble of its subsets.}.
+
+\subsection{Predictor}
+\label{sec:ch2-predictor}
+
+In statistical machine learning, a \textbf{predictor} is a \textbf{measurable function} $f$
+that maps an input $x \in \cX$ to an output $y \in \cY$. The goal of a predictor is to
+accurately model the relationship between the input features and the output
+variable.
+
+\subsection{Empirical Predictor}
+\label{sec:ch2-emppredictor}
+
+Given a dataset $\cD = \{(X_i, Y_i)\}_{i=1}^{N}$, the \textbf{empirical predictor} $\hat{f}$ is some predictor
+that depends on the on $\cD$ through some algorithm (also called ``model'').
+This predictor approximates the underlying relationship based on the observed
+data.
+
+\subsection{Dataset hypothesis}
+\label{sec:ch2-datasethyp}
+
+We consider a probabilistic setting $(\Omega, \mathcal{F}, \PP)$ over $\Omega = \cX \times \cY$, for instance
+$(\R^d \times \{0,1\}, \mathcal{B}(\R^d \times \{0,1\}))$\footnote{$\mathcal{B}(U)$ is the Borel sigma algebra associated to the set $U$ in some $\R^n$}. Denote
+\begin{equation}\label{eq:ch2-nu}
+\nu = \text{the distribution of the couple } (X, Y).
+\end{equation}
+The basic hypothesis that we make \textbf{in supervised learning} is that
+\begin{equation}\label{eq:ch2-iid}
+\cD \text{ is a i.i.d. sampling from the distribution } \nu \text{ in \eqref{eq:ch2-nu}.}
+\end{equation}
+
+\begin{tcolorbox}[advancedbox]
+\textbf{Advanced topics 2.1.} \textit{This hypothesis is \textbf{not} true in reinforcement learning!}
+\end{tcolorbox}
+
+\subsection{Loss Function, expected loss, risk}
+\label{sec:ch2-loss}
+
+A loss function $l(\hat{y}, y)$ measures the discrepancy between the true output $y$
+and the predicted output $\hat{y}$. The choice of loss function is crucial as it guides
+the learning process.
+
+\begin{definition}
+We call loss function a mapping $\ell : \cY \times \cY \to \R$ such that:
+\begin{align}
+\ell(\hat{y}, y) &\ge 0,\ \forall y, \hat{y} \in \cY \label{eq:ch2-lossnonneg} \\
+\ell(y, y) &= 0,\ \forall y \in \cY \label{eq:ch2-losszero}
+\end{align}
+\end{definition}
+
+\begin{example}
+For regression a common example is the mean squared error
+(MSE)
+\begin{equation}\label{eq:ch2-mse}
+l_{MSE}(\hat{y}, y) = (y - \hat{y})^2.
+\end{equation}
+\end{example}
+
+\begin{example}
+For general classification we rather use the cross-entropy loss
+(see later for formal definition) while for binary classification a suitable choice
+is
+\begin{equation}\label{eq:ch2-binary}
+l_{binary}(\hat{y}, y) = \ind_{y \neq \hat{y}}.
+\end{equation}
+\end{example}
+
+\begin{example}
+Sometimes the following loss, called $L^1$ (or L1) loss is employed:
+\begin{equation}\label{eq:ch2-l1}
+l_{L1}(\hat{y}, y) = |\hat{y} - y|.
+\end{equation}
+\end{example}
+
+When we sum the loss function over the whole dataset (empirical or not)
+we recover an aggregated loss function depending on some predictor $\hat{f}$ that is
+also called \textbf{expected loss} or \textbf{risk}:
+\begin{enumerate}
+  \item \textbf{empirical risk} (depends on dataset, on the loss function and on the predictor):
+  \begin{equation}\label{eq:ch2-emprisk}
+  \mathcal{R}^{\cD, l}(\hat{f}) = \frac{1}{N} \sum l(\hat{f}(X_i), Y_i).
+  \end{equation}
+  \item \textbf{risk} (depends on the predictor and the loss function):
+  \begin{equation}\label{eq:ch2-risk}
+  \mathcal{R}^{l}(\hat{f}) = \E[l(\hat{f}(X), Y)].
+  \end{equation}
+\end{enumerate}
+
+\subsection{Bayes Predictor}
+\label{sec:ch2-bayes}
+
+The \textbf{Bayes predictor} $f_{\text{Bayes}}$ is the theoretical optimal predictor that minimizes
+the risk over all possible predictors. It is defined through the property
+\begin{equation}\label{eq:ch2-bayesdef}
+\forall g : \cX \to \cY \text{ measurable} : \mathcal{R}^{l}(f_{\text{Bayes}}) \le \mathcal{R}^{l}(g).
+\end{equation}
+
+\begin{tcolorbox}[advancedbox]
+\textbf{Advanced topics 2.6.} \textit{We will assume in the following that a Bayes
+predictor exists. This assertion can be proved under some conditions on
+the loss function (positivity, measurability), the joint distribution $\nu$ (to
+ensure average is finite, to ensure rapid decay at infinity) and/or on the
+spaces (for instance compactness).}
+\end{tcolorbox}
+
+\begin{tcolorbox}[warningbox]
+\textbf{Warning 2.7.} \textit{The Bayes Predictor is not necessarily unique.}
+\end{tcolorbox}
+
+The Bayes predictor serves as a benchmark for evaluating the performance
+of empirical predictors.
+
+\begin{tcolorbox}[remarkbox]
+\textbf{Intuition 2.8.} \textit{The error of the Bayes predictor is related to how much
+the output can be inferred from the information in the input; for instance
+it is large when the input is independent of the output and zero when the
+output is a deterministic function of the input, see also equation~\eqref{eq:ch2-bayesreg}
+below.}
+\end{tcolorbox}
+
+\begin{proposition}\label{prop:ch2-bayes}
+Assume $\cX = \R^d$ and $\E[Y^2] < \infty$.
+\begin{enumerate}
+  \item For a regression problem with $l = l_{MSE}$, $Y = \R$ the Bayes predictor is:
+  \begin{equation}\label{eq:ch2-bayesreg}
+  f_{Br}(x) = \E[Y \mid X = x],
+  \end{equation}
+  where $\E[Y \mid X = x]$ is the conditional expectation of $Y$ given $x$.
+
+  \item For a binary classification (that is $\cY = \{0,1\}$) and loss $l_{binary}$ the Bayes
+  predictor is:
+  \begin{equation}\label{eq:ch2-bayesbin}
+  \begin{aligned}
+  f_{Bc}(x) &= \begin{cases} 1, & \text{if } \PP[Y = 1 \mid X = x] \ge 1/2 \\ 0, & \text{otherwise} \end{cases} \\
+  &= \sum_{y \in \{0,1\}} y \cdot \ind_{\PP[Y=y \mid X=x] \ge \PP[Y = 1-y \mid X=x]}.
+  \end{aligned}
+  \end{equation}
+\end{enumerate}
+\end{proposition}
+
+\begin{proof}
+For item 1 note that for any predictor $\hat{f}(X)$:
+\begin{equation}\label{eq:ch2-decomp}
+\begin{aligned}
+\mathcal{R}^{l_{MSE}}(\hat{f}) &= \E[(Y - \hat{f}(X))^2] = \E\!\left[\left\{\hat{f}(X) - \E[Y \mid X]\right\}^2\right] \\
+&\quad + \E[(Y - \E[Y \mid X])^2].
+\end{aligned}
+\end{equation}
+This is true because we can decompose $Y - \hat{f}(X)$ as $Y - \E[Y \mid X] + \E[Y \mid X] - \hat{f}(X)$;
+moreover the cross term is null:
+\begin{equation}\label{eq:ch2-crossnull}
+\E\!\left[\left\{\hat{f}(X) - \E[Y \mid X]\right\} \cdot \left\{Y - \E[Y \mid X]\right\}\right] = 0
+\end{equation}
+by the properties of the conditional expectation and because $\hat{f}(X) - \E[Y \mid X]$
+is measurable with respect to the sigma-algebra generated by $X$. We conclude
+by observing that from \eqref{eq:ch2-decomp} the risk of any predictor $\hat{f}(X)$ is larger
+than that of $\E[Y \mid X]$.
+
+For item 2 the previous relation is not useful because the predictor is constrained
+to only take values in the discrete set $\cY$. Let $\hat{f}$ be some given
+predictor and denote
+\begin{equation}\label{eq:ch2-eta}
+\eta(x) = \PP[Y = 1 \mid X = x].
+\end{equation}
+The error of $\hat{f}$ is
+\begin{equation}\label{eq:ch2-binerror}
+\begin{aligned}
+R^{l_{binary}}(\hat{f}) &= \E[l_{binary}(\hat{f}(X), Y)] = \E[\ind_{Y \neq \hat{f}(X)}] \\
+&= \E\!\left[\sum_{y \in \{0,1\}} \PP[Y = y, \hat{f}(X) = 1 - y]\right] \\
+&= \int_{\cX} \sum_{y \in \{0,1\}} \PP[Y = y, \hat{f}(X) = 1 - y \mid X = x] p_X(dx) \\
+&= \int_{\cX} \sum_{y \in \{0,1\}} \ind_{\hat{f}(x) = 1 - y} \PP[Y = y \mid X = x] p_X(dx) \\
+&= \int_{\cX} \ind_{\hat{f}(x) = 1}(1 - \eta(x)) p_X(dx) + \ind_{\hat{f}(x) = 0}\eta(x) p_X(dx) \\
+&\ge \int_{\cX} \min\{\eta(x), 1 - \eta(x)\} p_X(dx)
+\end{aligned}
+\end{equation}
+with equality for the predictor which is such that $\hat{f}(x) = 0$ when $\eta(x) \le
+1 - \eta(x)$ and $1$ otherwise. But this is precisely the Bayes predictor $f_{Bc}$ in
+\eqref{eq:ch2-bayesbin}. In particular we proved that
+\begin{equation}\label{eq:ch2-bayesbinrisk}
+R^{l_{binary}}(f_{Bc}) = \E[\min\{\eta(X), 1 - \eta(X)\}].
+\end{equation}
+\end{proof}
+
+Although useful, the Bayes predictor is implicit and in general not known.
+One looks for algorithms / methods / procedures to approximate it.
+
+\section{Bias-Variance Tradeoff for regression}
+\label{sec:ch2-biasvar}
+
+Consider a general regression problem where the goal is to find a predictor
+$\hat{f} : \cX \to \cY$ that minimizes the expected mean square error loss (see \eqref{eq:ch2-mse}
+for the definition of the loss $l_{MSE}$). Recall that in this context the \textbf{Bayes
+predictor} $f_{\text{Bayes}}$ is $f_{Br}$ in \eqref{eq:ch2-bayesreg}. Note also that in this section we are not
+attached to a particular dataset.
+
+\subsection{Decomposition of the risk}
+\label{sec:ch2-riskdecomp}
+
+\begin{proposition}\label{prop:ch2-riskdecomp}
+For a general predictor $\hat{f}$, the risk associated to $l_{MSE}$ can
+be decomposed into two components as follows:
+\begin{equation}\label{eq:ch2-riskdecomp}
+\begin{aligned}
+\mathcal{R}^{l_{MSE}}(\hat{f}) &= \E[(Y - \hat{f}(X))^2] \\
+&= \E\!\left[\left\{\hat{f}(X) - f_{\text{Bayes}}(X)\right\}^2\right] + \E[(Y - f_{\text{Bayes}}(X))^2].
+\end{aligned}
+\end{equation}
+\end{proposition}
+
+\begin{proof}
+This is a consequence of \eqref{eq:ch2-decomp} because in this case $f_{\text{Bayes}}(X) = \E[Y \mid X]$.
+\end{proof}
+
+\begin{tcolorbox}[remarkbox]
+\textbf{Intuition 2.11.} \textit{Thus the error is composed of two terms:\\
+-- a term $\E[\hat{f}(X) - f_{\text{Bayes}}(X)]^2$ that expresses the lack of optimality of
+our estimator $\hat{f}$ with respect to the Bayes (optimal) estimator;\\
+-- an irreducible term $\E[(Y - f_{\text{Bayes}}(X))^2]$ expressing intrinsic uncertainty
+still remaining in the data and saying that information present in the
+features $X$ is not enough to infer $Y$ exactly. This can only be made
+lower by a change in the design variable $X$.\\
+The proposition is a ``no free lunch'' type result: we can improve each
+of the terms but this is often as the expense of the other.}
+\end{tcolorbox}
+
+\subsection{\texorpdfstring{Pointwise risk for dataset dependent estimators when $Y = g(X) + \varepsilon$}{Pointwise risk for dataset dependent estimators when Y = g(X) + epsilon}}
+\label{sec:ch2-pointwise}
+
+Consider the special case where the response variable $Y$ is generated as a function
+of the input features plus an error term, $Y = g(X) + \varepsilon$, with $\varepsilon$ independent
+of $X$ and $\E[\varepsilon] = 0$, $\Var[\varepsilon] = \sigma^2$. In this case, the Bayes predictor simplifies to:
+$f_{\text{Bayes}} = g$.
+
+We take a particular type of estimator $\hat{f}^{\cD}$, namely one that is produced by a
+procedure operating on the dataset $\cD$ with input features $X_i \in \cX$ and response
+variables $Y_i \in \cY$. We honor hypothesis in Section~\ref{sec:ch2-datasethyp} and consider $X_i, Y_i$ as
+i.i.d. realization of some random couple $(X, Y)$. \textbf{It is the uncertainty in
+this realization that is considered in the following} i.e., we recognize
+that for a given, \textbf{fixed} $x_v \in \cX$ the stochasticity in $X_i, Y_i$ thus in $\cD$ will induce
+a stochasticity in $\hat{f}^{\cD}(x_v)$.
+
+\begin{proposition}\label{prop:ch2-biasvar}
+Under the previous assumptions (in particular the loss
+being $l_{MSE}$, $Y = g(X) + \varepsilon$, \ldots) the bias-variance decomposition for the predictor
+$\hat{f}^{\cD}$ at some point $x_v$ is:
+\begin{equation}\label{eq:ch2-biasvardecomp}
+\E[(Y - \hat{f}^{\cD}(x_v))^2] = \underbrace{(g(x_v) - \E[\hat{f}^{\cD}(x_v)])^2}_{(\mathrm{Bias}[\hat{f}^{\cD}(x_v)])^2} + \underbrace{\E[(\hat{f}^{\cD}(x_v) - \E[\hat{f}^{\cD}(x_v)])^2]}_{\Var[\hat{f}^{\cD}(x_v)]} + \sigma^2.
+\end{equation}
+\end{proposition}
+
+\begin{remark}
+Here $x_v$ and $g(x_v)$ are fixed, deterministic while $Y_v$ is random
+because comes from the relation $Y = g(x_v) + \varepsilon$ and $\hat{f}^{\cD}$ is also random
+because $\cD$ is random. Also important is to note that $Y$ and $\cD$ are \textbf{independent}.
+\end{remark}
+
+\begin{proof}
+We follow several steps:
+
+\textbf{Step 1}: Start with the definition of $Y$: $Y = g(x_v) + \varepsilon$ and write the expected
+squared error
+\[
+\E[(Y - \hat{f}^{\cD}(x_v))^2] = \E[(g(x_v) + \varepsilon - \hat{f}^{\cD}(x_v))^2].
+\]
+
+\textbf{Step 2}: Expanding the square and using the properties of expectation we
+obtain
+\[
+\E[(g(x_v) - \hat{f}^{\cD}(x_v))^2] + \E[\varepsilon^2] + 2\E[\varepsilon(g(x_v) - \hat{f}^{\cD}(x_v))].
+\]
+
+\textbf{Step 3}: Take as previously a conditional expectation with respect to $\cD$ and
+since on one hand $\varepsilon$ is independent of $\cD$ and on the other hand $\E[\varepsilon] = 0$,
+the cross-term vanishes; we are left with $\E[(g(x_v) - \hat{f}^{\cD}(x_v))^2] + \sigma^2$.
+
+\textbf{Step 4}: Recall the usual bias-variance decomposition true for any random
+variable $Z$ and any $a \in \R$:
+\begin{equation}\label{eq:ch2-bvgeneric}
+\E[(Z - a)^2] = \underbrace{(\E[Z] - a)^2}_{\text{bias squared}} + \underbrace{\E[(Z - \E[Z])^2]}_{\text{variance } \Var[Z]}.
+\end{equation}
+
+We set $Z = \hat{f}^{\cD}(x_v)$ and $a = g(x_v)$ to obtain:
+\begin{equation}\label{eq:ch2-biasvarfinal}
+\E[(g(x_v) - \hat{f}^{\cD}(x_v))^2] = (g(x_v) - \E[\hat{f}^{\cD}(x_v)])^2 + \E[(\hat{f}^{\cD}(x_v) - \E[\hat{f}^{\cD}(x_v)])^2].
+\end{equation}
+Here we identify the first part as $\left(\mathrm{Bias}[\hat{f}^{\cD}(x_v)]\right)^2$ and the second as
+$\Var[\hat{f}^{\cD}(x_v)]$.
+\end{proof}
+
+\begin{figure}[h]\centering
+% FIGURE PLACEHOLDER (uncomment & replace with \includegraphics when image is available):
+% \fbox{\parbox{0.7\linewidth}{\centering\textit{[Figure from PDF page 21: four-quadrant illustration of the bias-variance decomposition. Rows labeled ``Low Bias'' / ``High Bias'', columns labeled ``Low Variance'' / ``High Variance''. Each quadrant shows a target (concentric circles) with dart-like marks illustrating the distribution of predictions relative to the center.]}}}
+\caption{Illustration of the bias-variance decomposition in Proposition~\ref{prop:ch2-biasvar}.}
+\label{fig:ch2-biasvar}
+\end{figure}
+
+\begin{tcolorbox}[advancedbox]
+\textbf{Advanced topics 2.14.} Practical implications of bias-variance
+decomposition \eqref{eq:ch2-biasvardecomp} (see also Figure~\ref{fig:ch2-biasvar}):
+\begin{itemize}
+  \item the term $(g(x_v) - \E[\hat{f}^{\cD}(x_v)])^2$ represents the \textbf{bias squared}, indicating
+  the error due to the simplifications in the model. It is called ``bias''
+  to convey our hope that somehow the average over all datasets of our
+  model $\hat{f}^{\cD}$ will be $f_{\text{Bayes}}$. If this is not true then our procedure is biased.
+  High bias can lead to \textbf{underfitting}.
+  \item the term $\E[(\hat{f}^{\cD}(x_v) - \E[\hat{f}^{\cD}(x_v)])^2]$ represents the \textbf{variance} of the predictor
+  $\hat{f}^{\cD}$. It says that when the dataset changes the predictor will also
+  change so it reflects the dependence of the predictor on the particular
+  choice of dataset $\cD$ rather than on its general statistical properties. Often,
+  when we want to reduce the bias the model learns too much of the
+  details of the dataset $\cD$ and this variance will be high which can lead to
+  \textbf{overfitting} (the model is too sensitive to the training data).
+  \item finally, the term $\sigma^2$ represents the \textbf{irreducible error} due to the inherent
+  noise in the data. This term sets a lower bound on the achievable
+  error.
+\end{itemize}
+In practice, regularization techniques such as ridge regression and
+LASSO are employed to manage the bias-variance tradeoff. They add
+a regularization term to the loss function; the coefficient of this term is
+used to control the bias-variance trade-off.
+\end{tcolorbox}
+
+\section{Exercises}
+\label{sec:ch2-exercises}
+
+\begin{tcolorbox}[remarkbox]
+\textbf{Exercise 2.1} (Bayes predictor \& mensurability). \textit{Show that if $Y$ is $X$
+measurable then the error of the Bayes predictor is null.}
+\end{tcolorbox}
+
+\begin{tcolorbox}[remarkbox]
+\textbf{Exercise 2.2} ($L^1$ Bayes predictor). \textit{Consider the $L1$ loss \eqref{eq:ch2-l1}.}
+\begin{enumerate}
+  \item \textit{When $\cY = \R$ find the Bayes predictor for $l_{L1}$.}
+  \item \textit{What happens when $\cY = \R^m$ for some integer $m \ge 2$?}
+\end{enumerate}
+\end{tcolorbox}
+
+\begin{tcolorbox}[remarkbox]
+\textbf{Exercise 2.3} (Bayes predictor \& independence). \textit{Let $\ell$ denote a general
+loss function and suppose that $X$ and $Y$ are independent. Define the
+function $g : \cY \to \R$ by:}
+\begin{equation}\label{eq:ch2-exindep}
+g(a) := \E_Y[\ell(a, Y)],
+\end{equation}
+\textit{and suppose $g$ admits a global minimum $a_{min}$ on $\cY$.}
+\begin{enumerate}
+  \item \textit{Show that $f(x) = a_{min}\ \forall x \in \cX$ is a Bayes predictor.}
+  \item \textit{Explain how the result in item 1 applies for $\ell = l_{MSE}$ defined in \eqref{eq:ch2-mse}.}
+  \item \textit{Explain how the result in item 1 applies when $Y$ is Bernoulli with
+  $\PP[Y = 1] = p = 1 - \PP[Y = 0]$ and $\ell = l_{binary}$ defined in \eqref{eq:ch2-binary}.}
+\end{enumerate}
+\end{tcolorbox}

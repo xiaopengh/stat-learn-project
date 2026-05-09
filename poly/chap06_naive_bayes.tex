@@ -1,0 +1,404 @@
+\chapter{Naive Bayesian classification}
+\label{chap:naive-bayes}
+
+Naive Bayes is a probabilistic classifier based on Bayes' theorem. It is called
+\emph{Naive} because it assumes that features are conditionally independent given
+the class label. Despite this strong assumption, it performs well in various
+applications, including text classification, spam filtering, and sentiment
+analysis.
+
+\begin{warning}
+In practice the hypothesis (see~\eqref{eq:ch6-naive-assumption}) of the naive
+Bayes model is seldom exactly satisfied. It can nevertheless be used as a
+baseline and has surprisingly good results; this means that a model that
+performs worse than naive Bayes should probably not be used.
+\end{warning}
+
+\section{Worked-out example: Bag-of-Words sentiment analysis}
+\label{sec:ch6-bow-example}
+
+We will start with a worked-out example to apply the Naive Bayes classifier
+to a simple sentiment analysis problem. Given a collection of labeled reviews
+composed of words, we will compute probabilities to classify a new review as
+`positive' ($+$) or `negative' ($-$).
+
+Bayes' theorem states:
+\begin{equation}\label{eq:ch6-bayes}
+  \PP(C\mid X)=\frac{\PP(X\mid C)\,\PP(C)}{\PP(X)}
+\end{equation}
+where:
+\begin{itemize}
+  \item $\PP(C\mid X)$ is the posterior probability of class
+        $C\in\{+,-\}$ given the data (the review) $X$.
+  \item $\PP(X\mid C)$ is the likelihood of data $X$ given class $C$.
+  \item $\PP(C)$ is the prior probability of class $C$.
+  \item $\PP(X)$ is the evidence (which remains the same for all classes)
+        assumed to be strictly positive.
+\end{itemize}
+
+Here the `Review' is composed of words denoted $w$. The $\PP(X)$ is usually
+unknown but the same for all classes so we only need to compare:
+\begin{align}
+  \PP(\text{Positive}\mid\text{Review})
+    &\propto \PP(\text{Review}\mid\text{Positive})\,\PP(\text{Positive}),
+      \label{eq:ch6-prop-pos}\\
+  \PP(\text{Negative}\mid\text{Review})
+    &\propto \PP(\text{Review}\mid\text{Negative})\,\PP(\text{Negative}).
+      \label{eq:ch6-prop-neg}
+\end{align}
+
+The \emph{Naive Bayes assumption} states that words contribute independently
+to the probability, leading to:
+\begin{equation}\label{eq:ch6-bow-product}
+  \PP(\text{Review}\mid C)=\prod_{w\in\text{Review}}\PP(w\mid C).
+\end{equation}
+
+\begin{remark}
+The procedure here belongs to the general framework of `Bag-of-Words' (BoW)
+approaches which treat the text as an unordered collection of words,
+disregarding grammar and word order while preserving word frequency.
+\end{remark}
+
+We have a dataset of labeled movie reviews (Table~\ref{tab:ch6-training}).
+
+\begin{table}[ht]
+  \centering
+  \begin{tabular}{ll}
+    \toprule
+    \textbf{Review} & \textbf{Sentiment}\\
+    \midrule
+    love this movie    & Positive ($+$)\\
+    hate this film     & Negative ($-$)\\
+    great acting love  & Positive ($+$)\\
+    boring and slow    & Negative ($-$)\\
+    amazing film       & Positive ($+$)\\
+    bad and boring     & Negative ($-$)\\
+    \bottomrule
+  \end{tabular}
+  \caption{Training Data}
+  \label{tab:ch6-training}
+\end{table}
+
+We want to classify the review:
+\begin{equation}\label{eq:ch6-testreview}
+  \text{``love boring movie''}.
+\end{equation}
+
+\paragraph{Step 1: Compute Priors}
+\begin{equation}\label{eq:ch6-priors}
+  \PP(+)=\frac{3}{6}=0.5,\qquad \PP(-)=\frac{3}{6}=0.5.
+\end{equation}
+
+\paragraph{Step 2: Compute Likelihoods with Laplace Smoothing}
+The collection of all words, called ``vocabulary'', is:
+\begin{align}
+  V&=\{\text{love, this, movie, hate, film, great, acting, boring,
+        and, slow, amazing, bad}\},\label{eq:ch6-vocab}\\
+  |V|&=12.\label{eq:ch6-vocabsize}
+\end{align}
+
+The word frequencies are given in Table~\ref{tab:ch6-wordcounts}.
+
+\begin{table}[ht]
+  \centering
+  \small
+  \begin{tabular}{lcccccccccccc}
+    \toprule
+      & \rotatebox{60}{love} & \rotatebox{60}{this} & \rotatebox{60}{movie}
+      & \rotatebox{60}{hate} & \rotatebox{60}{film} & \rotatebox{60}{great}
+      & \rotatebox{60}{acting} & \rotatebox{60}{boring} & \rotatebox{60}{and}
+      & \rotatebox{60}{slow} & \rotatebox{60}{amazing} & \rotatebox{60}{bad}\\
+    \midrule
+    Positive ($+$) & 2 & 1 & 1 & 0 & 1 & 1 & 1 & 0 & 0 & 0 & 1 & 0\\
+    Negative ($-$) & 0 & 1 & 0 & 1 & 1 & 0 & 0 & 2 & 2 & 1 & 0 & 1\\
+    \bottomrule
+  \end{tabular}
+  \caption{Word Counts per Class}
+  \label{tab:ch6-wordcounts}
+\end{table}
+
+We now compute conditional probabilities. Note that in our procedure
+these probabilities will be multiplied; an obvious problem appears if one is
+zero because it will make the whole product null\footnote{This is a problem
+because, for instance, it would mean any word $w_1$ that never appeared
+in a Positive ($+$) labeled input has $\PP[w_1\mid(+)]=0$; also any word
+$w_2$ that never appeared in a Negative ($-$) labeled input has
+$\PP[w_2\mid(-)]=0$. But for a text $t$ containing both $w_1$ and $w_2$
+we would have $\PP[t\mid(+)]=\PP[t\mid(+)]=0$!}. To address this problem we
+use Laplace smoothing. Laplace smoothing is a technique used in probabilistic
+models to handle zero probabilities by adding a small constant $\alpha$
+(typically $1$) to all counts, modifying the probability estimate as
+\begin{equation}\label{eq:ch6-laplace-general}
+  \PP(w_i\mid C)=\frac{\mathrm{Count}(w_i,C)+\alpha}
+                      {\sum_{w}\mathrm{Count}(w,C)+\alpha|V|},
+\end{equation}
+ensuring that no probability is ever exactly zero. Using Laplace smoothing
+($\alpha=1$):
+\begin{equation}\label{eq:ch6-laplace-alpha1}
+  \PP(w_i\mid C)=\frac{\mathrm{Count}(w_i,C)+1}
+                      {\sum_{w}\mathrm{Count}(w,C)+|V|}.
+\end{equation}
+
+For the positive class ($+$):
+\begin{align}
+  \PP(\text{love}\mid +) &= \frac{2+1}{8+12}=\frac{3}{20}=0.15,
+  & \PP(\text{boring}\mid +) &= \frac{0+1}{8+12}=\frac{1}{20}=0.05,
+    \label{eq:ch6-likel-pos-1}\\
+  \PP(\text{movie}\mid +) &= \frac{1+1}{8+12}=\frac{2}{20}=0.10. & &
+    \label{eq:ch6-likel-pos-2}
+\end{align}
+
+For the negative class ($-$):
+\begin{align}
+  \PP(\text{love}\mid -) &= \frac{0+1}{9+12}=\frac{1}{21}\approx 0.048,
+  & \PP(\text{boring}\mid -) &= \frac{2+1}{9+12}=\frac{3}{21}=0.143,
+    \label{eq:ch6-likel-neg-1}\\
+  \PP(\text{movie}\mid -) &= \frac{0+1}{9+12}=\frac{1}{21}\approx 0.048. & &
+    \label{eq:ch6-likel-neg-2}
+\end{align}
+
+\paragraph{Step 3: Compute Posterior Probabilities}
+For Positive ($+$):
+\[
+  \PP(\text{Positive}\mid\text{Review})\propto
+  0.5\times 0.15\times 0.05\times 0.10 = 0.000375.
+\]
+For Negative ($-$):
+\[
+  \PP(\text{Negative}\mid\text{Review})\propto
+  0.5\times 0.048\times 0.143\times 0.048 = 0.000164.
+\]
+
+\paragraph{Step 4: Compare and Classify}
+Since
+\[
+  \PP(\text{Positive}\mid\text{Review})=0.000375 >
+  \PP(\text{Negative}\mid\text{Review})=0.000164,
+\]
+we classify review ``love boring movie'' as Positive ($+$). Despite its
+simplifying assumptions, Naive Bayes is highly effective for text
+classification tasks like spam filtering and sentiment analysis. Using
+probability estimates and Laplace smoothing, we were able to determine that
+``love boring movie'' should be classified as a positive review.
+
+\section{Statistical Formulation of Naive Bayes}
+\label{sec:ch6-statistical}
+
+\subsection{\emph{Discriminative Model} vs \emph{Generative Model}}
+\label{subsec:ch6-disc-vs-gen}
+
+\begin{definition}\label{def:ch6-disc-gen}
+\begin{enumerate}
+  \item A \emph{discriminative model} is a model for the conditional
+        probability $p(y\mid x):=\PP(Y=y\mid X=x)$ where
+        $(x,y)\in\cX\times\cY$.
+  \item A \emph{generative model} is a model for the joint probability
+        $p(x,y)=\PP(X=x,Y=y)$ where $(x,y)\in\cX\times\cY$.
+\end{enumerate}
+\end{definition}
+
+For instance, logistic regression is a discriminative model because we model
+$\PP(Y=1\mid X=x)$ by $\phi(w\T x+b)$ and $\PP(Y=0\mid X=x)$ by
+$1-\phi(w\T x+b)$. On the other hand, Naive Bayes classification is a
+generative model because for $\cX=V^{p}$ we write $\PP(X=x,Y=y)$ as:
+\begin{align}
+  \PP(X=x,Y=y) &= \PP(X=x\mid Y=y)\,\PP(Y=y)\nonumber\\
+               &\underset{\text{assumption}}{\overset{\text{Naive}}{\approx}}
+                 \prod_{j=1}^{p}\PP(X^{j}=x_{j}\mid Y=y)\cdot\PP(Y=y).
+  \label{eq:ch6-nb-joint}
+\end{align}
+
+Intuitively, a discriminative model directly models the difference between
+data points with different labels, whereas a generative model first learns the
+joint distribution $p(x,y)$ and then converts it into $p(y\mid x)$ for
+classification. A discriminative model is often \emph{more efficient} than a
+generative model. However, a generative model can be used to generate new data
+similar to existing data, which is particularly useful in data-scarce
+situations.
+
+\subsection{Naive Assumption and Marginal Distribution Modeling}
+\label{subsec:ch6-naive-marginals}
+
+We explain first the discrete setting where the elementary objects are tuples
+of size $p$:
+\begin{equation}\label{eq:ch6-discrete-setting}
+  \cX=\Omega^{p},\ \Omega\ \text{discrete}.
+\end{equation}
+
+The \emph{Naive} assumption is the following condition:
+\begin{equation}\label{eq:ch6-naive-assumption}
+  \forall (x_{1},\dots,x_{p})\in\cX,\ \forall y\in\cY:\
+  \PP\bigl(\underbrace{(X^{1},\dots,X^{p})}_{=X}=(x_{1},\dots,x_{p})\,\big|\,Y=y\bigr)
+  =\prod_{j=1}^{p}\PP(X^{j}=x_{j}\mid Y=y).
+\end{equation}
+
+\begin{warning}
+This relation is to be understood from the perspective
+of using a classifier, i.e., compare estimations for each label and choose
+the largest one (this works well) and not as a prediction of the real
+probabilities (does not work well); this is often formulated as:
+\begin{center}
+  \fbox{`naive Bayes is a good classifier but a bad predictor'}
+\end{center}
+\end{warning}
+
+\begin{warning}
+The assumption~\eqref{eq:ch6-discrete-setting} is taken to simplify the
+setting. Note that in many cases it is satisfied only after some adjustments
+of the dataset, for instance the dataset in Table~\ref{tab:ch6-training} does
+not satisfy it because while most objects have 3 words, the second to last,
+``amazing film'' has only 2 words. Several solutions can be proposed:
+\begin{itemize}
+  \item define $\cX=\bigcup_{p\ge 0}\Omega^{p}$ and assume that the length
+        $P$ of an input object is a random variable that is
+        \textbf{independent} of the label. Conditional to $P=p$ the
+        relation~\eqref{eq:ch6-naive-assumption} is assumed true;
+  \item or we can pad to the right with a special word called
+        ``end-of-sequence'' token ``\texttt{<EOS>}'' to have
+        $\Omega=V\cup\{\texttt{<EOS>}\}$, $p=3$ (or maximum value in general)
+        and $\cX=\Omega^{p}$ (see definition of $V$
+        in~\eqref{eq:ch6-vocab}).\footnote{In this case the model is not
+        realistic because by definition no other word can occur after
+        \texttt{<EOS>} so the naive Bayes independence assumption is not true
+        in practice.}
+\end{itemize}
+In any case, we assume the model is valid even if this is questionable
+from the modelisation point of view.
+\end{warning}
+
+Note that relation~\eqref{eq:ch6-discrete-setting} is not necessary a
+`Bag-of-Words' model as in Section~\ref{sec:ch6-bow-example}. It becomes one
+only after~\eqref{eq:ch6-naive-assumption} is assumed.
+
+Indeed, under this assumption, given $Y$ (the label), we model the
+(conditional) distribution of $X$ as the product of the (conditional) marginal
+distributions of $X^{j}$, $1\le j\le p$. Such a product is independent of the
+order of the factors.
+
+But one may chose from the start some base event set that \textbf{intrinsically}
+contains the Bag-of-Words assumption. That is, we may want to have elementary
+events that only keep track of the number of times each `word' (possible
+value) appears. So for $M=|\Omega|$ the elementary events are:
+\begin{equation}\label{eq:ch6-bow-space}
+  \mathcal{BOW}_{p}^{\Omega}:=\left\{(n_{1},\dots,n_{M})\in\N^{p}
+    \,\middle|\,\sum_{m}n_{m}=p\right\}.
+\end{equation}
+
+Now, the question is: what distribution should be chosen on
+$\mathcal{BOW}_{p}^{\Omega}$. We will give below a choice for the discrete
+version and one for the continuous version.
+
+\paragraph{$\bullet$ Categorical features ($\Omega$ discrete): Multinomial
+distribution}
+
+The multinomial distribution is a generalization of the binomial
+distribution. Recall that a multinomial distribution models the following
+phenomenon: we have an event with $M=|\Omega|$ possible values and denote:
+\[
+  \PP(\text{``$m$-th value''})=p_{m},\ 1\le m\le M.
+\]
+We draw $p$ times and let $W_{m}$, $1\le m\le M$ be the number of times the
+$m$-th value appears. Then, for all
+$\mathbf{n}=(n_{1},\dots,n_{M})\in\mathcal{BOW}_{p}^{\Omega}$, we have:
+\[
+  \PP(W_{1}=n_{1},\dots,W_{M}=n_{M})
+   =\frac{p!}{n_{1}!\cdots n_{M}!}\,p_{1}^{n_{1}}\cdots p_{M}^{n_{M}}.
+\]
+
+For example in the previous section we constructed two multinomial
+distributions: one for the Positive ($+$) sentiment and one for the Negative
+($-$) sentiment. The set of events is $V$ defined in~\eqref{eq:ch6-vocab} with
+$12$ values; here $p_{1}=\PP(\text{``love''})$, $p_{2}=\PP(\text{``this''})$
+and so on.
+
+Given the multinomial law on $\mathcal{BOW}_{p}^{\Omega}$, we may want now to
+generate objects in $\cX$. The (conditional) generation of an object in the
+set $\cX$ is compatible with the multinomial law on $\cX$; for instance, the
+first item in the dataset, ``love this movie'' corresponds to
+$n_{1}=n_{2}=n_{3}=1$ and $n_{k}=0$ for $k\ge 4$. Accordingly
+\begin{align}
+  \PP[X=\text{``love this movie''}\mid\text{Positive}]
+    &= C\cdot(p_{1})^{1}(p_{2})^{1}(p_{3})^{1}(p_{4})^{0}\cdots(p_{12})^{0}
+     \nonumber\\
+    &\propto \PP[\text{``love''}\mid\text{Positive}]
+            \cdot\PP[\text{``this''}\mid\text{Positive}] \nonumber\\
+    &\qquad\cdot\PP[\text{``movie''}\mid\text{Positive}].
+  \label{eq:ch6-multinom-example}
+\end{align}
+
+\paragraph{$\bullet$ Continuous features: Gaussian distribution}
+
+In practice, a continuous feature is often modeled using a Gaussian (possibly
+multivariate) distribution. For example, if $X=\texttt{patient height}$, we
+can model it using a $\cN(\mu,\sigma^{2})$ distribution with estimates:
+\begin{equation}\label{eq:ch6-gaussian-estimates}
+  \mu\simeq \frac{1}{N}\sum_{i=1}^{N}X_{i}
+  \quad\text{and}\quad
+  \sigma\simeq \frac{1}{N}\sum_{i=1}^{N}(X_{i}-\mu)^{2}
+\end{equation}
+where $\{(X_{1},Y_{1}),\dots,(X_{N},Y_{N})\}$ is the training data. Note that
+in this case, in the equation~\eqref{eq:ch6-discrete-setting} the density is
+used instead (otherwise the result is always null).
+
+\begin{remark}
+More general situations can appear when each dimension has different
+characteristics, for instance, some can be binary, others multinomial, and
+others continuous. In this case, the state space is not $\Omega^{p}$ but of
+type $\prod_{j=1}^{p}\Omega_{j}$ with $\Omega_{j}$ adapted to the dimension
+$j$. The independence assumption helps in constructing the overall probability
+as before.
+\end{remark}
+
+\begin{remark}
+Naive Bayes has some similarities with logistic regression, for instance, the
+presence of a linear decision boundary in the log-probability space. Both are
+related to the log-odd ratio
+$\log\!\left(\dfrac{\PP[Y=1\mid X]}{\PP[Y=0\mid X]}\right)$. But the naive
+Bayes has a generative perspective as it is concerned with the joint
+data-label distribution while logistic regression is a discriminative model
+because it is concerned with the conditional probability. Naive Bayes can be
+interpreted as a special case of Logistic Regression where the parameters
+$w_{i}$ are determined by generative probabilities rather than optimization.
+\end{remark}
+
+\begin{tcolorbox}[advancedbox]
+\textbf{Important technique 6.8.} \emph{Logarithms are commonly applied to
+probability computations to improve numerical stability. Given that the
+posterior probability is expressed as}
+\begin{equation}\label{eq:ch6-log-posterior-product}
+  \PP(Y\mid X)\propto \PP(Y)\prod_{i}\PP(X_{i}\mid Y),
+\end{equation}
+\emph{taking the logarithm transforms the product of probabilities into a
+summation:}
+\begin{equation}\label{eq:ch6-log-posterior-sum}
+  \log\PP(Y\mid X)\propto \log\PP(Y)+\sum_{i}\log\PP(X_{i}\mid Y).
+\end{equation}
+\emph{This conversion mitigates the effects of numerical underflow when dealing
+with very small probability values.}
+\end{tcolorbox}
+
+\section{Exercises: Naive Bayes}
+\label{sec:ch6-exercises}
+
+\begin{tcolorbox}[remarkbox]
+\textbf{Exercise 6.1} (mixed formulation)\textbf{.} Formulate naive Bayes when
+$p=2$ and the first feature (dimension) is discrete and the second feature
+continuous: use the product between probability and density and explain the
+relationship with likelihood.
+\end{tcolorbox}
+
+\section{Implementations: naive Bayes}
+\label{sec:ch6-implementations}
+
+\begin{tcolorbox}[remarkbox]
+\textbf{Exercise 6.2} (Naive Bayes on MNIST)\textbf{.}
+\begin{enumerate}
+  \item Consider the MNIST dataset. Binarize it, that is, transform each
+        image into an element of $\{0,1\}^{784}$. Compute accuracy of the
+        naive Bayes classification.
+  \item Do the same on CIFAR-10 after a transformation to grayscale and
+        binarization.
+\end{enumerate}
+Note: for CIFAR-10 an alternative form is to use quantization instead of
+binarization.
+\end{tcolorbox}

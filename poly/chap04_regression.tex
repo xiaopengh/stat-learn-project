@@ -1,0 +1,940 @@
+\chapter[Linear and logistic models]{Linear and logistic models in high dimension, regularization}
+
+The linear model is a fundamental and widely used approach in supervised
+learning. It is based on the idea of exploiting a linear combination of explanatory
+variables (\emph{features}) to generate predictions.
+
+\section{Reminders concerning Linear Regression}
+
+Linear regression assumes a linear relationship between the target variable
+(\emph{label}) $Y$ and the explanatory variables $X$. Although this assumption is often
+a simplified approximation, it proves extremely useful both conceptually and
+practically.
+
+\subsection{Formulation of the Linear Regression Model}
+
+Consider a dataset following the hypothesis in Section~2.1.3 denoted
+$\cD_N = \{(X_i, Y_i),\ i = 1, \ldots, N\}$. Here, $X$ is a variable taking values in $\R^p$,
+representing the $p$ explanatory variables (\emph{features}), and $Y$ is a variable taking
+values in $\R$, corresponding to the target variable (or dependent variable). For all
+$i \in \{1, \ldots, N\}$, we have $X_i = (x_{i,1}, \ldots, x_{i,p}) \in \R^p$ and, to simplify
+notations, we assume that $x_{i,1} = 1$\footnote{This assumption allows to treat a possible term that you may have encountered under the name of ``bias'' or ``intercept''; with this convention the term enters nicely into the vectorial format; see section~4.2 for an example of intercept (the `$b$' constant).}.
+
+\begin{tcolorbox}[remarkbox]
+\textbf{Assumption (H$_1$):} The relationship between $Y$ and $X$ is assumed to be
+linear, i.e., there exists a vector $\beta = (\beta_1, \ldots, \beta_p)\T \in \R^p$ such that:
+\begin{equation}\label{eq:ch4-linear-model}
+Y = X\beta + \varepsilon.
+\end{equation}
+\end{tcolorbox}
+
+\begin{remark}
+In Equation~\eqref{eq:ch4-linear-model}, $\beta = (\beta_1, \ldots, \beta_p)\T \in \R^p$ represents the
+unknown parameters of the model, which we aim to estimate (the optimization
+will be detailed in Sections~\ref{sec:ch4-ols} and~\ref{sec:ch4-mle}). The term $\varepsilon$ represents the
+noise, a random variable on which additional assumptions will be formulated
+later, see Assumption (H$_2$).
+\end{remark}
+
+Under Assumption (H$_1$), the data in $\cD_N$ can be written as follows:
+\begin{equation}\label{eq:ch4-data-scalar}
+Y_i = \beta_1 x_{i,1} + \beta_2 x_{i,2} + \cdots + \beta_p x_{i,p} + \varepsilon_i, \qquad i = 1, \ldots, N,
+\end{equation}
+where $\varepsilon_i \sim$ i.i.d.~$\varepsilon$. This expression can be reformulated in a matrix form:
+\begin{equation}\label{eq:ch4-data-matrix}
+\Y = \X \beta + \varepsilon,
+\end{equation}
+with:
+\[
+\Y = \begin{pmatrix} Y_1 \\ \vdots \\ Y_N \end{pmatrix}_{N \times 1}, \quad
+\X = \begin{pmatrix} x_{1,1} & \cdots & x_{1,p} \\ \vdots & \ddots & \vdots \\ x_{N,1} & \cdots & x_{N,p} \end{pmatrix}_{N \times p}, \quad
+\varepsilon = \begin{pmatrix} \varepsilon_1 \\ \vdots \\ \varepsilon_N \end{pmatrix}_{N \times 1}.
+\]
+
+\begin{tcolorbox}[remarkbox]
+\textbf{Assumption (H$_2$):} The following assumptions are made:
+\begin{enumerate}
+\item $\rank(\X) = p$,
+\item $\varepsilon \sim \Normal(0_N, \sigma^2 \Id_N)$, which means $\varepsilon_1, \ldots, \varepsilon_N \iid \Normal(0, \sigma^2)$.
+\end{enumerate}
+\end{tcolorbox}
+
+Here $0_N$ and $\Id_N$ are the null $N \times N$ matrix and the identity $N \times N$ matrix
+respectively. The goal is to determine an optimal estimator\footnote{``Optimal'' can be defined according to various criteria, such as the \emph{least squares} method (Section~\ref{sec:ch4-ols}), the \emph{maximum likelihood} method (Section~\ref{sec:ch4-mle}), or methods like \emph{Ridge} and \emph{Lasso} (Section~\ref{sec:ch4-lasso}).}
+$\beta^\star = (\beta_1^\star, \ldots, \beta_p^\star)\T \in \R^p$ based on the data $\cD_N$, and construct a predictive model (linear regression):
+\begin{equation}\label{eq:ch4-predictor}
+\widehat{f}^{\cD_N}(x) = x \beta^\star.
+\end{equation}
+For a new data point $x_0 \in \R^p$, the prediction of this model will be $y_0 = x_0 \beta^\star$
+($x_0$ is considered as a row vector).
+
+\subsection{Overview of the Ordinary Least Squares Estimator}\label{sec:ch4-ols}
+
+\begin{definition}[Ordinary Least Squares Estimator]\label{def:ch4-ols}
+The (ordinary) least squares estimator $\widehat{\beta}^{(OLS)}$ is defined as:
+\begin{equation}\label{eq:ch4-ols-def}
+\widehat{\beta}^{(OLS)} \in \argmin_{\alpha \in \R^p} \norm{\Y - \X \alpha}^2
+= \argmin_{\alpha \in \R^p} \sum_{i=1}^N \bigl(Y_i - X_i \alpha\bigr)^2,
+\end{equation}
+where $\norm{\cdot}$ denotes the Euclidean norm in $\R^n$.
+\end{definition}
+
+\begin{remark}
+By Definition~\ref{def:ch4-ols}, the model $\widehat{f}^{(OLS)}(x) := x \widehat{\beta}^{(OLS)}$ is the
+\textbf{linear} model that minimizes the empirical risk $\cR^{\cD_N, l_{MSE}}(\widehat{f})$ on $\cD_N$ for the
+loss function $l_{MSE}$ in~(2.5).
+However, this approach does not automatically address the problem of over-fitting.
+Consequently, the model $\widehat{f}^{(OLS)}(x) := x \widehat{\beta}^{(OLS)}$ may result in over-fitting.
+\end{remark}
+
+\begin{proposition}\label{prop:ch4-ols-formula}
+Under Assumptions (H$_1$) and (H$_2$), the least squares estimator for the linear regression is:
+\begin{equation}\label{eq:ch4-ols-formula}
+\widehat{\beta}^{(OLS)} = (\X\T \X)^{-1} \X\T \Y.
+\end{equation}
+\end{proposition}
+
+\begin{proof}
+This result is admitted and can be found in many statistical textbooks. It can be
+obtained from the convexity of the loss and the first order critical point equations.
+\end{proof}
+
+\begin{remark}
+To obtain additional properties of $\widehat{\beta}^{(OLS)}$ such as unbiasedness,
+some hypotheses on $\varepsilon$ are required, for instance $\E[\varepsilon \mid X] = 0$.
+\end{remark}
+
+Under Assumptions (H$_1$) and (H$_2$), the model $\widehat{f}^{(OLS)} = x \widehat{\beta}^{(OLS)}$ is called
+\emph{optimal} in the least squares sense.
+
+\subsection{Overview of the Maximum Likelihood Estimator (MLE)}\label{sec:ch4-mle}
+
+We first define the Maximum Likelihood Estimator for a general parametric
+procedure and then we apply to our linear model. Let $Z$ be a real-valued
+random variable, and suppose that the distribution of $Z$, denoted $\mu_Z^\theta$, depends
+on a parameter $\theta \in \Theta$, where $\Theta$ is the set of all possible parameters. For
+example:
+\begin{itemize}
+  \item If $Z$ has a discrete distribution, we denote $p_\theta(y) = \PP(Z = z)$.
+  \item If $Z$ has a continuous distribution (with respect to the Lebesgue measure),
+  we denote $\mu_Z^\theta(dz) = f_\theta(z) \lambda(dz)$, where $f_\theta(z)$ is the density of $Z$ with respect
+  to the Lebesgue measure $\lambda(dz)$.
+\end{itemize}
+
+Let $\mathbf{z} = (z_1, \ldots, z_n)$ be independent and identically distributed (i.i.d.) realizations
+of $Z$. The likelihood function\footnote{The likelihood can be interpreted as ``what is the probability of observing this sample $(z_1, \ldots, z_n)$ given the parameter $\theta$?''.} for $(z_1, \ldots, z_n)$ is given by:
+\begin{align}
+&\text{in the discrete case } L(\mathbf{z}; \theta) = L(z_1, \ldots, z_n; \theta) := \prod_{i=1}^n p_\theta(z_i),\label{eq:ch4-lik-disc}\\
+&\text{in the continuous case } L(\mathbf{z}; \theta) = L(z_1, \ldots, z_n; \theta) := \prod_{i=1}^n f_\theta(z_i).\label{eq:ch4-lik-cont}
+\end{align}
+
+This expression may be difficult to treat algebraically and for this reason
+it is often replaced by the log-likelihood function, which simplifies the computation
+by converting products into sums; the log-likelihood is defined as:
+\begin{equation}\label{eq:ch4-loglik-def}
+\text{Log likelihood: } \ell(\mathbf{z}; \theta) = \log L(\mathbf{z}; \theta).
+\end{equation}
+
+\begin{definition}[Maximum Likelihood Estimator (MLE)]
+If there exists a $\widehat{\theta} \in \Theta$ such that
+\begin{equation}\label{eq:ch4-mle-def}
+L(\mathbf{z}; \widehat{\theta}) = \sup_{\theta \in \Theta} L(\mathbf{z}; \theta) \quad \text{or equivalently: } \ell(\mathbf{z}; \widehat{\theta}) = \sup_{\theta \in \Theta} \ell(\mathbf{z}; \theta),
+\end{equation}
+then $\widehat{\theta}$ is called a\footnote{Note that the MLE is not necessarily unique.} Maximum Likelihood Estimator (MLE) and is often denoted
+by $\widehat{\theta}^{(ML)}$\footnote{The idea of the Maximum Likelihood Estimator is to find a parameter $\theta$ such that the likelihood of observing the realizations $(y_1, \ldots, y_n)$ is maximized.}.
+\end{definition}
+
+We now specialize to the Maximum Likelihood Estimator for a linear regression.
+The hypotheses (H$_1$) and (H$_2$) imply that $Y \sim \Normal(X\beta, \sigma^2)$, which is a distribution
+(conditional on $X$) that depends on the parameter $\beta$. Consequently,
+the likelihood and log-likelihood functions for the data $\cD_N = \{(X_i, Y_i),\ 1 \le i \le N\}$
+are\footnote{Cf. appendix A.4.1}:
+\begin{align}
+L_{\cD_N}(\beta) &= \frac{1}{(2\pi \sigma^2)^{N/2}} \exp\!\left[ -\frac{1}{2\sigma^2} \sum_{i=1}^N \bigl(Y_i - X_i \beta\bigr)^2 \right], \nonumber\\
+\ell_{\cD_N}(\beta) &= -\frac{N}{2} \log(2\pi) - \frac{N}{2} \log \sigma^2 - \frac{1}{2\sigma^2} \sum_{i=1}^N \bigl(Y_i - X_i \beta\bigr)^2. \label{eq:ch4-loglik-linreg}
+\end{align}
+
+According to~\eqref{eq:ch4-loglik-linreg}, it is clear that the estimator $\widehat{\beta}$ that maximizes this log-likelihood
+is the estimator that minimizes $\sum_{i=1}^N (Y_i - X_i \beta)^2$, which corresponds
+to the least squares estimator.
+
+\begin{proposition}[MLE for linear regression]
+Under the hypotheses (H$_1$) and (H$_2$), the maximum likelihood estimator of the linear model~\eqref{eq:ch4-data-scalar} is
+\begin{equation}\label{eq:ch4-mle-equals-ols}
+\widehat{\beta}^{(MLE)} = (\X\T \X)^{-1} \X\T \Y = \widehat{\beta}^{(OLS)}.
+\end{equation}
+\end{proposition}
+
+\section{Logistic Regression for Binary Classification}\label{sec:ch4-logistic}
+
+Here $\cY = \{0, 1\}$. We still denote $\cD_N = \{(X_i, Y_i),\ 1 \le i \le N\}$ the training
+data for the model. Let $x = (x^1, \ldots, x^p)\T \in \cX = \R^p$, where $\cX$ represents the
+space of $p$ features\footnote{Note that now inputs are represented as a column vector.}. A linear combination of $(x^1, \ldots, x^p, 1)\T$ can be expressed as:
+\begin{equation}\label{eq:ch4-linear-comb}
+w_1 x^1 + \cdots + w_p x^p + b = w\T x + b,
+\end{equation}
+where $w = (w_1, \ldots, w_p)\T \in \R^p$ is the weight vector (slope vector), and $b \in \R$
+is the intercept (sometimes called ``bias'').
+
+\begin{tcolorbox}[remarkbox]
+\textbf{Intuition 4.8.} The question is whether the linear combination of $w\T x + b$
+can be used to solve a binary classification problem i.e., with $\cY = \{0, 1\}$. A naive answer is negative because for a binary
+problem, $\cY = \{0, 1\}$, whereas $w\T x + b$ takes values in $\R$.
+Nevertheless, the linear model can be useful in the context of binary
+classification if we introduce an activation function $\boldsymbol{\sigma} : \R \to [0, 1]$; this
+activation $\boldsymbol{\sigma}(w\T x + b)$ will be used to predict the label conditional to
+$X = x$: if $\boldsymbol{\sigma}(w\T x + b) > 0.5$, predict label 1; otherwise, predict label 0.
+\end{tcolorbox}
+
+\subsection{Definition of the Logistic Regression}
+
+We introduce a particular activation function that will prove very useful in the
+following.
+
+\begin{definition}[Sigmoid activation function]
+The Sigmoid activation function is defined as:
+\begin{equation}\label{eq:ch4-sigmoid-def}
+\boldsymbol{\sigma} : x \in \R \mapsto \boldsymbol{\sigma}(x) = \frac{1}{1 + e^{-x}} \in\; ]0, 1[.
+\end{equation}
+\end{definition}
+
+\begin{lemma}
+The sigmoid function has the following properties:
+\begin{align}
+\forall x \in \R:\quad & 0 < \boldsymbol{\sigma}(x) < 1 \label{eq:ch4-sig-bounds}\\
+& \boldsymbol{\sigma}(x)' = \boldsymbol{\sigma}(x)\bigl(1 - \boldsymbol{\sigma}(x)\bigr) \label{eq:ch4-sig-deriv}\\
+& \boldsymbol{\sigma}(-x) + \boldsymbol{\sigma}(x) = 1. \label{eq:ch4-sig-sym}\\
+& \boldsymbol{\sigma}^{-1}(\cdot) = \mathrm{logit}(\cdot),\ \text{where } \mathrm{logit}(p) = \log\!\left( \frac{p}{1-p} \right). \label{eq:ch4-sig-logit}
+\end{align}
+\end{lemma}
+\begin{proof}
+By direct computations.
+\end{proof}
+
+Various generalizations can be proposed, for instance $\boldsymbol{\sigma}_{K,a,r}(t) = \frac{K}{1 + a e^{-rt}}$
+with $K, a, r \in \R_+$. However, here we will use the standard Sigmoid function,
+i.e., $K = a = r = 1$. See Figure~\ref{fig:ch4-sigmoid} for an illustration.
+We move now to the definition of the logistic regression. In a logistic
+regression model, the sigmoid function $\boldsymbol{\sigma}$ is used as an activation function.
+
+\begin{figure}[h]\centering
+% FIGURE PLACEHOLDER (uncomment & replace with \includegraphics when image is available):
+% \fbox{\parbox{0.7\linewidth}{\centering\textit{[Figure from PDF page 45: plot of the sigmoid function $\mathrm{sigmoid}(x) = 1/(1+e^{-x})$ on $[-5, 5]$, with horizontal asymptote at $1$.]}}}
+\caption{The sigmoid activation function.}\label{fig:ch4-sigmoid}
+\end{figure}
+
+The binary classifier defined by the logistic regression is:
+\begin{equation}\label{eq:ch4-classifier}
+\mathrm{classifier}^{\cD_N}(x) = \begin{cases} 1, & \text{if } \boldsymbol{\sigma}(w\T x + b) = \dfrac{1}{1 + \exp\!\bigl(-(w\T x + b)\bigr)} \ge 0.5 \\ 0, & \text{otherwise} \end{cases},
+\end{equation}
+where:
+\begin{itemize}
+\item $x \in \cX = \R^p$ is the input point to predict;
+\item the weight vector $w = (w_1, \ldots, w_p)\T \in \R^p$ and the intercept $b \in \R$ are model parameters to be optimized using the data $\cD_N$;
+\item $0.5$ is a decision threshold. This threshold can be adjusted to make the predictor more or less strict.
+\end{itemize}
+
+\begin{tcolorbox}[remarkbox]
+\textbf{Intuition 4.11.} The main idea of $\{0, 1\}$-classification is to predict the
+conditional probability $\PP(Y = 1 \mid X = x)$. For instance, in a $k$-NN
+model, $\PP(Y = 1 \mid X = x)$ is predicted by $\frac{1}{K} \sum_{j=1}^K Y_{i_j(x)}$, which is the
+average label of the $K$ nearest neighbors of $x$. A logistic regression
+model is a model parametrized by $w, b$ where we suppose that
+\begin{align}
+&\PP(Y = 1 \mid X = x) = f^{(w,b)}(x) \label{eq:ch4-cond-prob-1}\\
+&\text{with } f^{(w,b)}(x) := \boldsymbol{\sigma}(w\T x + b) = \frac{1}{1 + \exp\!\bigl(-(w\T x + b)\bigr)}. \label{eq:ch4-fwb-def}
+\end{align}
+The parameters $(w, b)$ will be searched using the training data $\cD_N = \{(X_i, Y_i),\ 1 \le i \le N\}$. This model formulation can seem unusual at
+first but is just a way to specify parameters on some conditional distribution, here Bernoulli; compare with the linear model where assumptions
+concerned parameters of another conditional distribution, a Gaussian.
+\end{tcolorbox}
+
+Other interpretations of the logistic regression exist.
+\begin{enumerate}
+\item Logistic regression can be viewed as linear regression of the \emph{logit} term.
+Recall that the \emph{logit} defined in~\eqref{eq:ch4-sig-logit} that is, the logarithm of the odds,
+maps probabilities in $(0, 1)$ onto $\R$. In our case, if, according to the
+model, $\PP(Y = 1 \mid X = x) = \frac{1}{1 + \exp(-(w\T x + b))}$, then: $\PP(Y = 0 \mid X = x) =
+1 - \PP(Y = 1 \mid X = x) = \frac{\exp(-(w\T x + b))}{1 + \exp(-(w\T x + b))}$. This implies: $\exp(w\T x + b) = \frac{\PP(Y = 1 \mid X = x)}{\PP(Y = 0 \mid X = x)}$ thus
+\begin{equation}\label{eq:ch4-logit-regression}
+w\T x + b = \log\!\left( \frac{\PP(Y = 1 \mid X = x)}{1 - \PP(Y = 1 \mid X = x)} \right) = \mathrm{logit}\bigl(\PP(Y = 1 \mid X = x)\bigr).
+\end{equation}
+So we are performing a regression on $\mathrm{logit}(\PP(Y = 1 \mid X = x))$ viewed as
+depending on the value $x$. But, in this interpretation, we do not dispose
+of stable empirical estimations of the logit.
+
+\item Logistic regression can also be viewed as an artificial neural network with
+no hidden layers and a single output, see Figure~\ref{fig:ch4-single-neuron} for an illustration
+and the Chapter~7 for details on neural networks.
+\end{enumerate}
+
+\begin{figure}[h]\centering
+% FIGURE PLACEHOLDER (uncomment & replace with \includegraphics when image is available):
+% \fbox{\parbox{0.7\linewidth}{\centering\textit{[Figure from PDF page 46: a neural-network diagram showing inputs $x_1, x_2, x_3, \ldots, x_p$ each connected with weights $w_1, \ldots, w_p$ to a summation node $\sum_{i=1}^p w_i x_i + b$ (with bias $b$), whose output is passed through $\mathrm{sigmoid}(\cdot)$ to produce $\widehat{y}$.]}}}
+\caption{Logistic Regression as a Single Neuron Network.}\label{fig:ch4-single-neuron}
+\end{figure}
+
+So far, we have defined the logistic regression predictor. The following
+questions arise:
+\begin{itemize}
+\item How to find the parameters $w$ and $b$ by optimization?
+\item In what sense is the optimization considered optimal?
+\item What loss function should be chosen?
+\end{itemize}
+
+\subsection{Generalized Loss Function for Logistic Regression}
+
+In Section~2, we introduced an example of a loss function for classification, the
+binary loss in equation~(2.7). However, this function lacks desirable properties
+(continuity, differentiability, convexity, etc.), making it challenging to apply
+optimization techniques such as gradient descent to find the optimal values of
+$(w, b)$. In this section, we define the loss function differently: \emph{via likelihood} or
+\emph{via cross-entropy}. We work under assumptions~\eqref{eq:ch4-cond-prob-1} and~\eqref{eq:ch4-fwb-def}.
+
+\subsubsection*{By Likelihood}
+
+Under the logistic regression model:
+\begin{equation}\label{eq:ch4-bern-params}
+\PP(Y = 1 \mid X = x) = f^{(w,b)}(x), \qquad \PP(Y = 0 \mid X = x) = 1 - f^{(w,b)}(x).
+\end{equation}
+i.e., the conditional distribution of the variable $Y$ given $X = x$ follows a
+Bernoulli distribution with parameter $f^{(w,b)}(x)$. Consequently for a dataset
+$\cD_N$ the likelihood function can be expressed as:
+\begin{align}
+L_{\cD_N}(w, b) &= \prod_{1 \le i \le N} \PP(Y = Y_i \mid X = X_i) \nonumber\\
+&= \prod_{1 \le i \le N\,:\, Y_i = 1} \PP(Y = 1 \mid X = X_i) \cdot \prod_{1 \le i \le N\,:\, Y_i = 0} \PP(Y = 0 \mid X = X_i) \label{eq:ch4-lik-split}\\
+&= \prod_{1 \le i \le N\,:\, Y_i = 1} f^{(w,b)}(X_i) \cdot \prod_{1 \le i \le N\,:\, Y_i = 0} \bigl(1 - f^{(w,b)}(X_i)\bigr) \nonumber\\
+&= \prod_{1 \le i \le N} f^{(w,b)}(X_i)^{Y_i} \bigl(1 - f^{(w,b)}(X_i)\bigr)^{1 - Y_i}. \label{eq:ch4-lik-bern}
+\end{align}
+
+The log-likelihood $\ell_{\cD_N}(w, b) = \log\bigl(L_{\cD_N}(w, b)\bigr)$ is thus:
+\begin{equation}\label{eq:ch4-loglik-logistic}
+\ell_{\cD_N}(w, b) = \sum_{1 \le i \le N} \Bigl( Y_i \log\bigl( f^{(w,b)}(X_i) \bigr) + (1 - Y_i) \log\bigl( 1 - f^{(w,b)}(X_i) \bigr) \Bigr).
+\end{equation}
+
+We aim to find a maximum likelihood estimator
+\[
+(w^*, b^*) \in \argmax L_{\cD_N}(w, b).
+\]
+
+Note that finding $\argmax L_{\cD_N}(w, b)$ is equivalent to finding $\argmax \ell_{\cD_N}(w, b)$,
+which is also equivalent to finding $\argmin -L_{\cD_N}(w, b)$, and finally to finding
+$\argmin -\ell_{\cD_N}(w, b)$. This allows us to define the cost function (commonly referred
+to as the \emph{loss function} or \emph{cost function})\footnote{The terms ``loss function'' and ``cost function'' are analogous. The term ``loss function'' typically refers to the error for a single training data point, whereas ``cost function'' often refers to the average (or sum) of the loss functions over the entire training dataset.} coherent with the empirical risk
+$\cR^{\cD_N}(f)$ defined in~(2.9), as:
+\[
+\cR^{\cD_N}\bigl( f^{(w,b)} \bigr) := -\ell_{\cD_N}(w, b),
+\]
+and we seek to find a minimizer of the function $(w, b) \mapsto -\ell_{\cD_N}(w, b)$.
+
+\begin{remark}
+The function $(w, b) \mapsto -\ell_{\cD_N}(w, b)$ is convex, cf. Exercise~4.2.
+\end{remark}
+
+\subsubsection*{By Cross-Entropy}
+
+\begin{tcolorbox}[remarkbox]
+\textbf{Intuition 4.13.} We can consider that the logistic regression outputs
+not a number but a distribution; when the activated output is `$a$' we can
+interpret it as a Bernoulli distribution with parameter `$a$'. On the other
+hand, the dataset $\cD_N$ is also a collection of conditional distributions,
+some may be Dirac masses (a particular case of Bernoulli distribution)
+but other can be non-trivial Bernoulli distributions; this latter case
+appears when in $\cD_N$ we have some $X_i = X_j$ but $Y_i \ne Y_j$. Once this
+is done we need to operate with some (pseudo-) metric defined on the
+space of Bernoulli distributions.
+\end{tcolorbox}
+
+We recall first a general definition of the cross-entropy.
+
+\begin{definition}[Cross-entropy for two discrete probability measures]
+Let $p, q$ be two probability measures defined on the same finite set $\mathcal{Z} = \{z_1, \ldots, z_K\}$.
+The cross-entropy of $q$ relative to $p$ on $\mathcal{Z}$ is defined as:
+\begin{equation}\label{eq:ch4-ce-discrete}
+H(p, q) := -\sum_{z \in \mathcal{Z}} p(z) \log\bigl( q(z) \bigr).
+\end{equation}
+Here, $p$ is referred to as the reference probability measure.
+\end{definition}
+
+\begin{tcolorbox}[advancedbox]
+\textbf{Advanced topics 4.15.} For two probability measures $p, q$ on an arbitrary space the entropy $H(p)$ \& cross-entropy $H(p, q)$ are defined as:
+\begin{align}
+\text{entropy:} \quad & H(p) = -\E_p[\log p], \label{eq:ch4-entropy-def}\\
+\text{cross-entropy:} \quad & H(p, q) = -\E_p[\log q]. \label{eq:ch4-ce-def}
+\end{align}
+Then cross-entropy can be seen as the linearization in $q$ of the entropy
+because it is a first order linear expansion at $q$: $H(p, q) = H(q) + \grad_q H(q) (p - q)$.
+When measure $p$ has continuous density, the entropy $H(p)$ is also called
+`differential entropy'. This case is more delicate because we are taking
+the expectation of logarithm of the density; but density is with respect
+to the Lebesgue measure which means that we have fixed the measurement
+units, the (cross) entropy will then change if we change the units, so it
+is not an intrinsic characteristic of the distribution.
+\end{tcolorbox}
+
+Cross-entropy is a concept from information theory that quantifies ``how
+uncertain events are''. It can be understood here as a (non-symmetric) measure
+of the difference between two probability distributions. In general, $H(p, q) \ne H(q, p)$,
+so it is essential to specify which measure is the reference, here $p$.
+Let us explain how cross-entropy applied in evaluating classification models.
+For a given data point $x_0 \in \cX = \R^p$, if its true label is $y_0 = 1$ (we suppose
+it is unique), it can be considered that we acquired some information on the
+\emph{true} conditional probability $\PP[Y = y \mid X = x_0]$ of $Y$ given $X = x_0$, namely this
+conditional distribution seems to equal the distribution $(1, 0)$. As a probability measure $p^{(x_0, y_0)}$ (conditioned on $X = x_0$) we obtain $p^{(x_0, y_0)}(1) = 1 = y_0$
+and $p^{(x_0, y_0)}(0) = 0 = 1 - y_0$. On the other hand, when $y_0 = 0$ it is normal
+to associate the distribution with probabilities $p^{(x_0, y_0)}(1) = 0 = y_0$ and
+$p^{(x_0, y_0)}(0) = 1 = 1 - y_0$. So in both cases the associated distribution is
+$(y_0, 1 - y_0)$.
+
+Now, when $x_0$ is passed through the logistic regression model, we obtain
+predicted conditional probabilities, denoted $q^{(x_0, y_0)}$, as follows:
+\begin{align}
+q^{(x_0, y_0)}(1) &= \PP(Y = 1 \mid X = x_0) = f^{(w,b)}(x_0), \label{eq:ch4-q-one}\\
+q^{(x_0, y_0)}(0) &= \PP(Y = 0 \mid X = x_0) = 1 - f^{(w,b)}(x_0). \label{eq:ch4-q-zero}
+\end{align}
+
+\begin{remark}
+The sigmoid $\boldsymbol{\sigma}(\cdot)$ does not take values $0$ or $1$ so the predicted
+probabilities are never exactly $0$ or $1$.
+\end{remark}
+
+Using $p^{(x_0, y_0)}$ as the reference measure in the cross-entropy definition, we
+compute the cross-entropy of the predicted distribution relative to the conditional probability for this data point $(x_0, y_0)$ as:
+\begin{align}
+H\bigl(p^{(x_0, y_0)}, q^{(x_0, y_0)}\bigr) &= -\sum_{y \in \cY} p^{(x_0, y_0)}(y) \log\bigl( q^{(x_0, y_0)}(y) \bigr) \nonumber\\
+&= -y_0 \cdot \log\bigl( q^{(x_0, y_0)}(y) \bigr) - (1 - y_0) \cdot \log\bigl( q^{(x_0, y_0)}(y) \bigr) \nonumber\\
+&= -\Bigl[ y_0 \cdot \log\bigl( f^{(w,b)}(x_0) \bigr) + (1 - y_0) \cdot \log\bigl( 1 - f^{(w,b)}(x_0) \bigr) \Bigr]. \label{eq:ch4-ce-pointwise}
+\end{align}
+
+This leads to consider for the training data $\cD_N$, a cost function based on
+cross-entropy defined as:
+\begin{align}
+\cR^{\cD_N}\bigl( f^{(w,b)} \bigr) &:= \frac{1}{N} \sum_{i=1}^N H\bigl( p^{(X_i, Y_i)}, q^{(X_i, Y_i)} \bigr) \nonumber\\
+&= \frac{1}{N} \sum_{i=1}^N -\Bigl[ Y_i \cdot \log\bigl( f^{(w,b)}(X_i) \bigr) + (1 - Y_i) \cdot \log\bigl( 1 - f^{(w,b)}(X_i) \bigr) \Bigr] \nonumber\\
+&= -\frac{1}{N} \ell_{\cD_N}(w, b), \label{eq:ch4-ce-cost}
+\end{align}
+where $\ell_{\cD_N}(w, b)$ is the log-likelihood from~\eqref{eq:ch4-loglik-logistic}. Note that strictly speaking
+this is \textbf{not} a loss function in the sense of Definition~2.2 but it still has the same
+intention. So we proved that
+\begin{equation}\label{eq:ch4-mle-ce-equiv}
+\begin{gathered}
+\text{\textbf{maximizing the (log-)likelihood (averaged over the dataset)}} \\
+\text{is equivalent to} \\
+\text{\textbf{minimizing the cross-entropy (averaged over the dataset)}}.
+\end{gathered}
+\end{equation}
+
+\begin{tcolorbox}[advancedbox]
+\textbf{Advanced topics 4.17.} One may ask what happens when the empirical
+distribution of $Y$ conditional to $X = x$ is not a Dirac mass but a general
+Bernoulli distribution. One has to prove that the log-likelihood / entropy
+is additive with respect to a mixture of distributions. This seems obvious
+when the mixture concerns the $p$ distribution but not $q$, which is enough
+for our purpose. See Exercise~4.3 for a more formal definition. This
+may seem at first contradictory with the optimization objective: for a
+data point $x_0, y_0$ our loss tends to orient $q^{x_0, \cdot}$ towards the Dirac mass in
+$y_0$ while it also orients $q^{x_0, \cdot}$ towards $y_1$ should $(x_0, y_1)$ also appear in the
+dataset. This is because $q^{\cdot, \cdot}$ truly depends only on the first argument.
+So we never really expect the loss to be completely null unless there is
+deterministic dependence.
+\end{tcolorbox}
+
+\subsection{Finding the solution}
+
+Contrary to the situation of the linear regression, the minimization above does
+not have a close formula for the optimal solution. Numerical algorithms are
+then used to find it. It has been proved, cf.~\cite{turinici1} that for non-pathological data\footnote{Data is pathological if for instance all labels are equal or the input vectors are collinear.}
+the properties of the optimal point depend on whether the dataset is separable
+by a hyperplane or not; the surprising result is that the separable case is not
+very convenient because in this case the coefficients of the regression go to
+infinity, see Example~\ref{ex:ch4-separable} and Exercise~4.4.
+
+\begin{example}\label{ex:ch4-separable}
+Consider a simple example with the dataset $\cD = \{(x_1, y_1), (x_2, y_2)\}$
+with all $x_i, y_i$ real numbers. The log-likelihood for the logistic regression with parameters $(w, b)$ is $\ell_{\cD}(w, b) = \sum_{i=1}^2 \bigl[ y_i \log \boldsymbol{\sigma}(x_i w + b) + (1 - y_i) \log\bigl( 1 - \boldsymbol{\sigma}(x_i w + b) \bigr) \bigr]$ where $\boldsymbol{\sigma}(\cdot)$ is the sigmoid activation defined in~\eqref{eq:ch4-sigmoid-def}.
+Take the \textbf{separated} dataset with $x_1 = -1$, $y_1 = 0$ and $x_2 = 1$, $y_2 = 1$, the log-likelihood becomes: $\widetilde{\ell}_{\cD}(w, b) = \log\bigl( 1 - \boldsymbol{\sigma}(-w + b) \bigr) + \log \boldsymbol{\sigma}(w + b)$. Denoting $\alpha = e^w$, $\beta = e^b$ we obtain the function to maximize as $\log\!\left( \frac{\alpha^2 \beta}{(\alpha + \beta)(1 + \alpha \beta)} \right)$ which,
+since $\alpha, \beta \ge 0$, is maximized for $\alpha = \infty$ and $\beta$ any finite value. But $\alpha = \infty$
+corresponds to $w = \infty$!
+\end{example}
+
+Since analytic solutions are not available we will have to resort to numerical
+procedures. This will be discussed in Sections~\ref{sec:ch4-ridge} and~\ref{sec:ch4-lasso} and Chapter~5.
+
+\subsection{The Decision Boundary of the Logistic Regression}
+
+The exact decision boundary of a $\{0, 1\}$-classification model is the set:
+\begin{align}
+\text{Exact Decision Boundary} &= \bigl\{ x \in \cX = \R^p \mid \text{prediction of } \PP(Y = 1 \mid X = x) \nonumber\\
+&\qquad\qquad\qquad\qquad = \text{prediction of } \PP(Y = 0 \mid X = x) \bigr\} \nonumber\\
+&= \bigl\{ x \in \cX \mid f^{(w,b)}(x) = 1 - f^{(w,b)}(x) \bigr\} = \bigl\{ x \in \cX \mid f^{(w,b)}(x) = 1/2 \bigr\}. \label{eq:ch4-decision-boundary}
+\end{align}
+where we used that in the logistic regression model, the prediction of $\PP(Y = 1 \mid X = x)$
+is estimated by $f^{(w,b)}(x)$ and the prediction for $\PP(Y = 0 \mid X = x)$
+is estimated by $1 - f^{(w,b)}(x)$. Since $f^{(w,b)}(x) = \boldsymbol{\sigma}(w\T x + b) = \frac{1}{1 + \exp(-(w\T x + b))}$
+the condition $f^{(w,b)}(x) = 1/2$ becomes $\exp(-(w\T x + b)) = 1$ which happens
+when $w\T x + b = 0$ consequently, the decision boundary of a logistic regression
+model is the hyperplane:
+\begin{equation}\label{eq:ch4-hyperplane}
+\bigl\{ x \in \cX \mid w\T x + b = 0 \bigr\}.
+\end{equation}
+
+So the logistic regression will be successful when the data is \textbf{linearly separated}.
+What if this is not the case? One may for instance change variables to reduce
+to the previous linear separation case, see Figure~\ref{fig:ch4-decision-bound}.
+
+\begin{remark}
+In reality we should distinguish between the exact and numerical decision boundary. The latter is similar to the exact version but
+uses $\widehat{w}, \widehat{b}$ the logistic regression solutions obtained by previous steps.
+\end{remark}
+
+\begin{figure}[h]\centering
+% FIGURE PLACEHOLDER (uncomment & replace with \includegraphics when image is available):
+% \fbox{\parbox{0.9\linewidth}{\centering\textit{[Figure from PDF page 53: two scatter plots. Left: points in the $(x_1, x_2)$-plane with a linear (dashed) decision boundary separating two coloured classes. Right: points arranged so that one class forms an inner disk surrounded by the other class; the decision boundary is a dashed circle, suggesting a switch to polar coordinates to make the data linearly separable.]}}}
+\caption{The logistic regression method is better suited for linearly separable data (left). One could switch to polar coordinates on the data on the right to make them linearly separable.}\label{fig:ch4-decision-bound}
+\end{figure}
+
+\section{Why regularization?}
+
+We will give several examples of problems encountered in regression fitting.
+As we will see, all are somehow related and will lead us to envision a common
+solution.
+
+\subsection{Data dependence}
+
+Consider a simple 2D linear regression problem with four data points as in
+Figure~\ref{fig:ch4-data-dep}.
+
+We fit a simple linear regression model using three points as training set
+and one for testing. Consider two situations: fitting on first three points $(1, 2)$,
+$(2, 3)$, $(3, 5)$ and fitting on Points $(2, 3)$, $(3, 5)$, $(4, 10)$. We see in Figure~\ref{fig:ch4-data-dep} that
+the two regression give completely different results for the points $X = 1$ and
+$X = 4$. Depending on which points we choose for training, the resulting model
+can vary significantly. Both models fit their respective training data well but
+perform poorly on the test points. Which one is the best? How can we not
+let our procedure be affected too much by a small modification in the data?
+
+\begin{figure}[h]\centering
+% FIGURE PLACEHOLDER (uncomment & replace with \includegraphics when image is available):
+% \fbox{\parbox{0.9\linewidth}{\centering\textit{[Figure from PDF page 54: on the left, a table of four data points $(X, Y) \in \{(1, 2), (2, 3), (3, 5), (4, 10)\}$; on the right, a scatter plot of these four points together with two linear fits --- Model 1 trained on the first three points and Model 2 trained on the last three points --- showing very different predictions at $X = 1$ and $X = 4$.]}}}
+\caption{Data dependence of the linear regression prediction. \textbf{Left:} the dataset. \textbf{Right:} two trained models using different training sets (subset of the initial dataset).}\label{fig:ch4-data-dep}
+\end{figure}
+
+\subsection{Data rank problems}
+
+Another situation arrives when the dataset is high-dimensional and the number
+of samples is insufficient to describe it completely; this can be seen in the rank
+of the dataset matrix, see Figure~\ref{fig:ch4-pca-mnist}. In this case hypothesis H$_2$ is not satisfied
+any more and the (numerical) solution may not be unique. Each solution will
+produce a different prediction and we will witness overfitting.
+
+\begin{figure}[h]\centering
+% FIGURE PLACEHOLDER (uncomment & replace with \includegraphics when image is available):
+% \fbox{\parbox{0.9\linewidth}{\centering\textit{[Figure from PDF page 54: two plots, one of the cumulative explained variance as a function of the number of principal components (rising sharply and levelling off below 1.0), and one of the eigenvalues (log scale) as a function of the principal-component index, showing a steep drop around index 713.]}}}
+\caption{PCA of the MNIST dataset. At some point (index 713) the eigenvalues fall below numerical round-off threshold of $10^{-16}$ which means that the data is rank deficient.}\label{fig:ch4-pca-mnist}
+\end{figure}
+
+\subsection{Noise fitting, overfitting}
+
+Finally, consider a third example, polynomial overfitting. Overfitting occurs
+when a statistical model captures not only the underlying pattern of the data
+but also the noise. This leads to excellent performance on the training data
+but poor generalization to unseen data. Polynomial regression is a common
+example where overfitting can be observed as the degree of the polynomial
+increases. Polynomial regression is a simple linear regression but the input
+data $X_i$ is augmented with all powers $X_i^k$ for $k$ from $0$ to some maximum
+polynomial degree.
+
+To demonstrate overfitting, we generated a noisy sine wave and fitted polynomials of varying degrees (up to $12$). The data was split into training and
+testing sets to evaluate performance.
+
+Figure~\ref{fig:ch4-poly-overfit} illustrates the fitted polynomials alongside the noisy data. As
+the polynomial degree increases, the model fits the training data more closely,
+but the error on the test data also increases, highlighting overfitting.
+
+\begin{figure}[h]\centering
+% FIGURE PLACEHOLDER (uncomment & replace with \includegraphics when image is available):
+% \fbox{\parbox{0.9\linewidth}{\centering\textit{[Figure from PDF page 55: three plots. Top: the noisy training data together with fitted polynomials of degrees 3 and 12 (degree 3: train error 0.02, test error 0.04; degree 12: train error 0.00, test error 61208.55); the degree-12 curve oscillates wildly. Bottom left: train and test errors (log scale) as a function of polynomial degree, with the test error exploding at high degree. Bottom right: $L^2$ norm of the coefficient vector as a function of degree, increasing sharply with degree.]}}}
+\caption{Polynomial regression fits with varying degrees. Training and test errors are displayed for each fit.}\label{fig:ch4-poly-overfit}
+\end{figure}
+
+For lower-degree polynomials (e.g., degree 1), the model underfits the data,
+failing to capture the underlying sine wave pattern. As the degree increases,
+the model captures more nuances of the training data, including noise, which
+results in overfitting. This is evident from the increasing test error for higher-degree polynomials.
+A closer look at the regression parameters shows that the coefficients for
+the higher degree polynomials are very large. Large values will tend to be more
+unstable. This leads to the regularization idea presented next.
+
+\section{Ridge (L2) Regularization}\label{sec:ch4-ridge}
+
+\begin{figure}[h]\centering
+% FIGURE PLACEHOLDER (uncomment & replace with \includegraphics when image is available):
+% \fbox{\parbox{0.9\linewidth}{\centering\textit{[Figure from PDF page 56: in the $(\beta_1, \beta_2)$-plane, a blue dot marks the OLS solution, concentric red dotted ellipses represent the contours of the residual sum of squares $\norm{\Y - \X \beta}_2^2$ centred on OLS, a blue circle represents the ridge penalty region $\norm{\beta}_2 \le M_\lambda^R$, and a black dot marks the ridge solution where the smallest ellipse touches the circle.]}}}
+\caption{Axes $\beta_1$ and $\beta_2$ represent the coefficients in a 2D parameter space. Blue Dot (OLS): The point $(1, 1)$ is the unregularized least squares solution. Red dotted Ellipses: These are the residuals level curves centered at the OLS solution, i.e. the level lines of the data term $\norm{\Y - \X \beta}_2^2$. Blue Circle: The constraint region from the ridge penalty $\norm{\beta}_2 \le M_\lambda^R$. Black Dot (Ridge Solution): The point where the smallest ellipse (i.e., smallest data error) touches the blue constraint circle, representing the ridge solution.}\label{fig:ch4-ridge-geometry}
+\end{figure}
+
+\subsection{Ridge Regression (L2-regularization)}
+
+We will explain the ridge regression idea for the linear regression. The principle
+is to find a solution to the regression problem while ensuring its stability by
+penalizing the L2 norm of the regression coefficients.
+
+The most important properties follow from the proposition below:
+
+\begin{proposition}\label{prop:ch4-ridge}
+Let $\lambda \ge 0$ and define the penalized cost $\cR^{OLS, R, \lambda}(\beta)$:
+\begin{equation}\label{eq:ch4-ridge-cost}
+\cR^{OLS, R, \lambda}(\beta) := \norm{\Y - \X \beta}_2^2 + \lambda \norm{\beta}_2^2
+= \sum_{i=1}^N (Y_i - X_i \beta)^2 + \lambda \beta_i^2
+\end{equation}
+where $\norm{\cdot}_2$ is the standard Euclidian norm defined in~(A.3). Also introduce
+the matrix $T_\lambda$\footnote{This notation is related to Tichonov regularization, of which ridge is a particular case.}:
+\begin{equation}\label{eq:ch4-T-lambda}
+T_\lambda := \X\T \X + \lambda \Id_p,
+\end{equation}
+Then for $\lambda > 0$:
+\begin{enumerate}
+\item the optimization problem:
+\begin{equation}\label{eq:ch4-ridge-min}
+\min_{\beta \in \R^p} \cR^{OLS, R, \lambda}(\beta),
+\end{equation}
+has an unique solution
+\begin{equation}\label{eq:ch4-ridge-sol}
+\widehat{\beta}^{(R)} = T_\lambda^{-1} \X\T \Y,
+\end{equation}
+where $\Id_p = \left[\begin{smallmatrix} 1 & 0 & \cdots & 0 \\ 0 & 1 & \cdots & 0 \\ \vdots & \vdots & \ddots & \vdots \\ 0 & 0 & \cdots & 1 \end{smallmatrix}\right] \in \R^{p \times p}$ is the $p \times p$ identity matrix.
+
+\item Moreover $\widehat{\beta}^{(R)}$ is the unique solution to the constrained optimization
+problem:
+\begin{equation}\label{eq:ch4-ridge-constrained}
+\min_{\beta \in \R^p} \norm{\Y - \X \beta}^2 \quad \text{subject to } \norm{\beta}_2 \le M_\lambda^R,
+\end{equation}
+where $M_\lambda^R = \norm{T_\lambda^{-1} \X\T \Y}_2$.
+\end{enumerate}
+\end{proposition}
+
+\begin{proof}
+The cost can be written in the form
+\begin{equation}\label{eq:ch4-ridge-expanded}
+\cR^{OLS, R, \lambda}(\beta) = \inner{T_\lambda \beta}{\beta} - 2 \inner{\X^T \Y}{\beta} + \norm{\Y}_2^2.
+\end{equation}
+When $\lambda > 0$, the matrix $T_\lambda$ is symmetric positive definite hence invertible.
+We are thus minimizing a positive quadratic form $\cR^{OLS, R, \lambda}(\beta)$ which leads
+to the existence and uniqueness of the minimizer.
+As an alternative proof we can invoke Proposition~A.5 because the function
+$\cR^{OLS, R, \lambda}(\beta)$:
+\begin{itemize}
+\item is obviously continuous
+\item is coercive because of the term $\norm{\beta}_2^2$
+\item is strictly convex being the sum of a strictly convex function $\norm{\beta}_2^2$ and a
+convex function $\norm{\Y - \X \beta}^2$; the latter is convex because it is a composition
+of a linear and a convex function, see Lemma~A.3.
+\end{itemize}
+The first order critical point equation (derivatives have to be null) are
+$T_\lambda \widehat{\beta}^{(R)} = \X\T \Y$ and lead to the formula~\eqref{eq:ch4-ridge-sol}. Note that $\widehat{\beta}^{(R)}$ always
+exists (even when $p > N$).
+For the second part note that on one hand the problem~\eqref{eq:ch4-ridge-constrained} has obviously
+a solution which is $\widehat{\beta}^{(R)}$. But this works also the other way around: any
+other solution to~\eqref{eq:ch4-ridge-constrained} will be at least a good minimizer of $\cR^{OLS, R, \lambda}(\beta)$
+as $\widehat{\beta}^{(R)}$ is, which, by the uniqueness of the minimizer of $\cR^{OLS, R, \lambda}(\beta)$ gives
+the conclusion.
+\end{proof}
+
+\begin{tcolorbox}[advancedbox]
+\textbf{Advanced topics 4.21.} The equivalence of the two minimization procedures proved in this proposition is also useful in another areas like
+the mean-variance Markowitz portfolio optimization in finance, see~\cite{turinici4},
+Chapters 3--5 and Appendix A].
+\end{tcolorbox}
+
+\begin{definition}[Ridge Estimator]
+The ridge estimator is the estimator corresponding to the solution to the penalized cost minimization problem in Proposition~\ref{prop:ch4-ridge}, with $\lambda \ge 0$ being the hyper-parameter of the model\footnote{The parameter $\lambda$ can be set using \emph{cross-validation}, see Section~\ref{sec:ch4-cv}.}.
+\end{definition}
+
+Figure~\ref{fig:ch4-ridge-geometry} illustrates the constrained optimization problem~\eqref{eq:ch4-ridge-constrained} in dimension $p = 2$.
+
+Note that when $\lambda = 0$, $\widehat{\beta}^{(R)}$ equals the Ordinary Least Squares (OLS)
+estimator, provided $\X\T \X$ is invertible. If $\X\T \X$ is not invertible it can be
+shown that a minimal norm solution is selected cf. Exercise~4.5. We prove
+below that when $\lambda \to 0$ the optimum risk $\cR^{OLS, R, \lambda}$ will converge to the one
+for the non-regularized problem.
+
+\begin{lemma}
+Denote $\cR^{OLS, R, \lambda, *} = \inf_\beta \cR^{OLS, R, \lambda}(\beta)$. Then:
+\begin{equation}\label{eq:ch4-ridge-limit-zero}
+\lim_{\lambda \to 0} \cR^{OLS, R, \lambda, *} = \min_\beta \norm{\Y - \X \beta}^2 = \cR^{OLS, R, 0, *}.
+\end{equation}
+\end{lemma}
+
+\begin{proof}
+Denote $\widehat{\beta}^{(R), \lambda}$ be the ridge estimator for $\lambda$. Then:
+\begin{align}
+\norm{\Y - \X \beta}^2 + \lambda \norm{\beta}^2 &= \cR^{OLS, R, \lambda}(\beta) \ge \cR^{OLS, R, \lambda, *} \nonumber\\
+&= \norm{\Y - \X \widehat{\beta}^{(R), \lambda}}^2 + \lambda \norm{\widehat{\beta}^{(R), \lambda}}^2 \nonumber\\
+&\ge \norm{\Y - \X \widehat{\beta}^{(R), \lambda}}^2 \ge \min_\beta \norm{\Y - \X \beta}^2 = \cR^{OLS, R, 0, *}. \label{eq:ch4-ridge-chain}
+\end{align}
+For $\lambda \to 0$ we obtain that any accumulation point of $\cR^{OLS, R, \lambda, *}$ is between
+$\cR^{OLS, R, 0, *}$ and $\norm{\Y - \X \beta}^2$. Now minimize over $\beta$ to obtain the result.
+\end{proof}
+
+When $\lambda$ is large the answer is given by the next result.
+
+\begin{lemma}
+When $\lambda \to \infty$ the ridge estimator converges to the null vector.
+\end{lemma}
+
+\begin{proof}
+Let $\widehat{\beta}^{(R), \lambda}$ be the ridge estimator for $\lambda$. By the minimization property
+we can write
+\begin{equation}\label{eq:ch4-ridge-bound-infty}
+\lambda \norm{\widehat{\beta}^{(R), \lambda}}_2^2 \le \cR^{OLS, R, \lambda}(\widehat{\beta}^{(R), \lambda}) \le \cR^{OLS, R, \lambda}(0) = \norm{\Y}_2^2
+\end{equation}
+which implies $\norm{\widehat{\beta}^{(R), \lambda}}_2^2 \le \frac{\norm{\Y}_2^2}{\lambda}$ and we obtain the conclusion when $\lambda \to \infty$.
+\end{proof}
+
+\begin{remark}
+It is possible to obtain an analytic formula for $\widehat{\beta}^{(R)}$, see Exercise~4.5.
+\end{remark}
+
+\begin{tcolorbox}[advancedbox]
+\textbf{Advanced topics 4.26.} Some textbooks or software (e.g., the \texttt{sklearn} Python package) use another definition of the Ridge estimator as
+the solution to the following penalized optimization problem:
+\begin{equation}\label{eq:ch4-ridge-sklearn}
+\min_{\beta \in \R^p} \norm{\Y - \X \beta}_2^2 + \lambda \sum_{j=1}^p \beta_j^2,
+\end{equation}
+where the difference is that intercept $\beta_0$ is not penalized. This comes
+from the fact that in practice, before applying the ridge regression, data
+is often standardized:
+\begin{equation}\label{eq:ch4-standardize}
+\begin{gathered}
+X_{i,j} \to X_{i,j}^{(\mathrm{stand})} := \frac{X_{i,j} - \bar{X}_j}{\sigma_j}, \qquad Y_i \to Y_i^{(\mathrm{stand})} := \frac{Y_i - \bar{Y}}{\sigma_Y} \\
+\text{with: } \bar{X}_j = \frac{\sum_{i=1}^N X_{i,j}}{N},\ \sigma_j = \left[ \frac{\sum_{i=1}^N (X_{i,j} - \bar{X}_j)^2}{N - 1} \right]^{1/2} \\
+\bar{Y} = \frac{\sum_{i=1}^N Y_i}{N},\ \sigma_Y = \left[ \frac{\sum_{i=1}^N (Y_i - \bar{Y})^2}{N - 1} \right]^{1/2}
+\end{gathered}
+\end{equation}
+In the \texttt{sklearn} package, the parameter \texttt{fit\_intercept = True} or \texttt{False}
+can control which definition is considered.
+\end{tcolorbox}
+
+\section{Lasso (L1) regularization}\label{sec:ch4-lasso}
+
+We will investigate now a second type of regularization, the Lasso (least absolute shrinkage and selection operator) regularization, also called $L^1$ regularization. It is introduced using an analogue of the Proposition~\ref{prop:ch4-ridge} that presents
+its most important properties.
+
+\begin{proposition}\label{prop:ch4-lasso}
+Define the penalized cost:
+\begin{equation}\label{eq:ch4-lasso-cost}
+\cR^{OLS, L, \lambda}(\beta) := \norm{\Y - \X \beta}_2^2 + \lambda \norm{\beta}_1 = \sum_{i=1}^N (Y_i - X_i \beta)^2 + \lambda \abs{\beta_i}
+\end{equation}
+where $\norm{\cdot}_1$ is the L1 norm defined in~(A.2). Then
+\begin{enumerate}
+\item the optimization problem:
+\begin{equation}\label{eq:ch4-lasso-min}
+\min_{\beta \in \R^p} \cR^{OLS, L, \lambda}(\beta),
+\end{equation}
+has at least a solution $\widehat{\beta}^{(L)}$.
+
+\item for any two solutions $\widehat{\beta}^{(L), 1}$ and $\widehat{\beta}^{(L), 2}$:
+\begin{equation}\label{eq:ch4-lasso-same-pred}
+\X \widehat{\beta}^{(L), 1} = \X \widehat{\beta}^{(L), 2} \quad \text{and} \quad \norm{\widehat{\beta}^{(L), 1}}_1 = \norm{\widehat{\beta}^{(L), 2}}_1.
+\end{equation}
+
+\item We will denote $M_\lambda^L := \norm{\widehat{\beta}^{(L)}}_1$ where $\widehat{\beta}^{(L)}$ is a solution. The problem~\eqref{eq:ch4-lasso-min} is equivalent to the constrained optimization problem:
+\begin{equation}\label{eq:ch4-lasso-constrained}
+\min_{\beta \in \R^p} \norm{\Y - \X \beta}^2 \quad \text{subject to } \norm{\beta}_1 \le M_\lambda^L.
+\end{equation}
+
+\item If $\rank(\X) = p$ then the solution is unique.
+\end{enumerate}
+\end{proposition}
+
+\begin{proof}
+We invoke Proposition~A.5 because the function $\cR^{OLS, L, \lambda}(\beta)$ is obviously continuous and coercive because of the term $\norm{\beta}_1$. Note that, as in
+Proposition~\ref{prop:ch4-ridge} the function $\cR^{OLS, L, \lambda}(\beta)$ can be proven to be convex but,
+unlike before, it is not necessarily strictly convex because here the norm
+appears to power 1 not 2!
+To prove~\eqref{eq:ch4-lasso-same-pred} note first that no risk can be below the risk of a minimizer
+so the risk of all minimizers is the same. Also note that the function
+\begin{equation}\label{eq:ch4-lasso-interp}
+\xi \in [0, 1] \mapsto \norm{\Y - \X \bigl( (1 - \xi) \widehat{\beta}^{(L), 1} + \xi \widehat{\beta}^{(L), 2} \bigr)}^2
+\end{equation}
+is convex; if the function is strictly convex:
+\begin{align}
+\forall \xi \in\; ]0, 1[:\ \cR^{OLS, L, \lambda}\bigl( (1 - \xi) \widehat{\beta}^{(L), 1} + \xi \widehat{\beta}^{(L), 2} \bigr) &< (1 - \xi) \cR^{OLS, L, \lambda}(\widehat{\beta}^{(L), 1}) + \xi \cR^{OLS, L, \lambda}(\widehat{\beta}^{(L), 2}) \nonumber\\
+&= \cR^{OLS, L, \lambda}(\widehat{\beta}^{(L), 1}) = \cR^{OLS, L, \lambda}(\widehat{\beta}^{(L), 2}), \label{eq:ch4-lasso-strict-conv}
+\end{align}
+which is impossible. But the function in~\eqref{eq:ch4-lasso-interp} is strictly convex as soon
+as the coefficient $\norm{\X (\widehat{\beta}^{(L), 1} - \widehat{\beta}^{(L), 2})}_2^2$ of the quadratic term $\xi^2$ is non-null.
+So we must have $\norm{\X (\widehat{\beta}^{(L), 1} - \widehat{\beta}^{(L), 2})}_2^2 = 0$ which gives the conclusion for
+this part.
+The proof of~\eqref{eq:ch4-lasso-constrained} is similar to the analogue statement in Proposition~\ref{prop:ch4-ridge}.
+For the final conclusion note that when the rank is full we are back in the
+situation of strict convexity so the uniqueness follows from Proposition~A.5.
+\end{proof}
+
+\begin{tcolorbox}[advancedbox]
+\textbf{Advanced topics 4.28.} Using standard convexity arguments we can
+even prove that either the solution is unique or there is an uncountable
+set of solutions.
+\end{tcolorbox}
+
+\begin{definition}[Lasso Estimator]
+The Lasso estimator is any solution of
+the penalized cost minimization problem in Proposition~\ref{prop:ch4-lasso}, with $\lambda \ge 0$ being
+the hyper-parameter of the model.
+\end{definition}
+
+Note that by Proposition~\ref{prop:ch4-lasso} point 2 all estimators share the same predictor so the LASSO predictor is well defined.
+
+\begin{remark}
+The Lasso regularization has a different homogeneity than
+the ridge regularization, that is, the penalization term is of second order in
+the ridge regularization and of first order in the lasso procedure. This will
+have an impact on the behavior of the solution.
+\end{remark}
+
+Figure~\ref{fig:ch4-lasso-geometry} illustrates the constrained optimization problem~\eqref{eq:ch4-lasso-constrained} in dimension $p = 2$.
+
+\begin{figure}[h]\centering
+% FIGURE PLACEHOLDER (uncomment & replace with \includegraphics when image is available):
+% \fbox{\parbox{0.9\linewidth}{\centering\textit{[Figure from PDF page 62: in the $(\beta_1, \beta_2)$-plane, a blue dot marks the OLS solution, concentric red dotted ellipses represent the residual-sum-of-squares contours, a rotated blue square (diamond) represents the Lasso penalty region $\norm{\beta}_1 \le M_\lambda^L$, and a black dot marks the Lasso solution at a corner of the diamond where the smallest ellipse touches the diamond.]}}}
+\caption{Analog to Figure~\ref{fig:ch4-ridge-geometry} for Lasso regression.}\label{fig:ch4-lasso-geometry}
+\end{figure}
+
+What about extreme cases $\lambda = 0$ and $\lambda \to \infty$? Similar to the ridge
+regression, when $\lambda = 0$ the Lasso estimator will equal the Ordinary Least
+Squares (OLS) estimator, provided $\X\T \X$ is invertible; when $\lambda$ is large it will
+converge to zero, as shown in the following lemma:
+
+\begin{lemma}
+When $\lambda \to \infty$ the Lasso estimators converge to the null vector.
+\end{lemma}
+
+\begin{proof}
+Let $\widehat{\beta}^{(L), \lambda}$ be a Lasso estimator for $\lambda$. As in the proof of the
+Lemma~4.24 we obtain by minimization:
+\begin{equation}\label{eq:ch4-lasso-bound-infty}
+\lambda \norm{\widehat{\beta}^{(L), \lambda}}_1 \le \cR^{OLS, L, \lambda}(\widehat{\beta}^{(L), \lambda}) \le \cR^{OLS, L, \lambda}(0) = \norm{\Y}_2^2
+\end{equation}
+which implies $\norm{\widehat{\beta}^{(L), \lambda}}_1 \le \frac{\norm{\Y}_2^2}{\lambda}$ and gives the conclusion when $\lambda \to \infty$.
+\end{proof}
+
+\begin{remark}
+The Lasso regularization is mainly known for its preference
+to \textbf{set to zero} some of the $\beta$ components. This allow to only keep relevant
+explanatory variables and eliminate the others. Intuitively this behavior is
+visible in the form of the level lines of the penalty, see Figure~\ref{fig:ch4-lasso-geometry}: while
+for ridge regression level lines are curves, here level lines are unions of
+linear objects and optimum is more likely to appear at the corners. See
+Exercise~4.6 for technical details.
+\end{remark}
+
+\begin{tcolorbox}[advancedbox]
+\textbf{Advanced topics 4.33.} Other regularization can be imagined combining ridge and lasso estimators, for instance Elasticnet will use a cost
+term $\cR^{OLS, E, \lambda_1, \lambda_2}(\beta) := \norm{\Y - \X \beta}_2^2 + \lambda_1 \norm{\beta}_1 + \lambda_2 \norm{\beta}_2^2$.
+\end{tcolorbox}
+
+\begin{tcolorbox}[advancedbox]
+\textbf{Advanced topics 4.34.} Regularization extends to any other procedures
+that involve minimization, for instance to logistic regression.
+\end{tcolorbox}
+
+\section{Cross validation}\label{sec:ch4-cv}
+
+Cross-validation is a robust statistical method used to estimate the performance of predictive models. Among various techniques, K-fold cross-validation
+stands out due to its balance between bias and variance in model assessment.
+We provide a formal description of the K-fold cross-validation procedure for a
+general risk function and a dataset $\cD_N$.
+
+Let $\cD_N = \{(X_i, Y_i)\}_{i=1}^N$ denote a dataset satisfying the hypothesis~(2.2)
+where $X_i \in \cX$ represents the features and $Y_i \in \cY$ the corresponding response.
+We consider a model $\widehat{f}(\cdot; \lambda)$ involving some hyper-parameter $\lambda \in \Lambda$ that aims
+to approximate the true underlying relationship between $X$ and $Y$. The performance of the model is quantified by a risk function $\cR$ built from a loss
+function $l$ as in~(2.9). The question is how to find the best hyper-parameter
+of the model.
+
+K-fold cross-validation involves partitioning the dataset $\cD_N$ into $K$ approximately equal-sized, mutually exclusive subsets (folds) $\cD_1, \cD_2, \ldots, \cD_K$.
+The procedure is as follows:
+
+\begin{enumerate}
+\item \textbf{Partitioning the Data:} Divide $\cD_N$ into $K$ disjoint subsets $\cD_1, \cD_2, \ldots, \cD_K$ such that: $\bigcup_{k=1}^K \cD_k = \cD_N$, $\cD_k \cap \cD_l = \emptyset$ for $k \ne l$.
+
+\item \textbf{Model Training and Validation:} For each fold $k \in \{1, 2, \ldots, K\}$:
+\begin{enumerate}
+\item Define the training dataset $\cD_{-k} = \cD_N \setminus \cD_k$.
+\item Train the model on $\cD_{-k}$ to obtain $\widehat{f}^{(k)}(\cdot; \lambda)$;
+\item Evaluate the model on the validation dataset $\cD_k$ using the risk
+function $\cR$.
+\end{enumerate}
+\end{enumerate}
+
+\begin{figure}[h]\centering
+% FIGURE PLACEHOLDER (uncomment & replace with \includegraphics when image is available):
+% \fbox{\parbox{0.9\linewidth}{\centering\textit{[Figure from PDF page 64: a grid illustrating 5-fold cross-validation: five rows labelled Fold 1, \ldots, Fold 5, each with five cells $\cD_1, \ldots, \cD_5$ marked either ``Val'' (validation) or ``Train'' (training); in each row a different single column is the validation set.]}}}
+\caption{Illustration of K-Fold Cross-Validation with $K = 5$. Each fold is used once as a validation set while the remaining folds form the training set.}\label{fig:ch4-kfold}
+\end{figure}
+
+\begin{enumerate}
+\setcounter{enumi}{2}
+\item \textbf{Compute the Cross-Validation Estimate:} The K-fold cross-validation
+estimate of the risk is given by $\widehat{\cR}_{\mathrm{CV}}(\lambda) = \frac{1}{K} \sum_{k=1}^K \cR^{\cD_k, l}\bigl( \widehat{f}^{(k)}(\cdot; \lambda) \bigr)$.
+
+\item \textbf{Model Selection and Assessment:} The model with the lowest cross-validation risk estimate is selected, i.e., $\lambda_{\mathrm{opt}} \in \argmin \widehat{\cR}_{\mathrm{CV}}(\lambda)$.
+\end{enumerate}
+
+K-fold cross-validation strikes a balance between bias and variance:
+\begin{itemize}
+\item \textbf{Bias:} As $K$ increases, the training dataset in each fold becomes larger,
+leading to a lower bias in the risk estimate.
+\item \textbf{Variance:} A larger $K$ results in higher correlation between training sets
+across folds, potentially increasing the variance of the risk estimate.
+\end{itemize}
+
+Common choices of $K$ include $K = 5$ or $K = 10$, which have been empirically shown to provide a good trade-off in many practical applications.
+
+\section{Further techniques: Group Lasso}
+
+Group Lasso is a regularization technique that extends the lasso to situations
+where the coefficients are naturally organized into groups and one wants
+to enforce that the whole group is either included in or excluded from the
+model. Instead of applying the L1 penalty to individual coefficients (as in
+standard lasso), group lasso applies the L2 penalty to each group of coefficients, but enforces the \textbf{L1 penalty at the group level}. This means that
+either all coefficients in a group are included or none of them are included in
+the final model.
+
+\begin{sloppypar}
+Consider a collection of coefficients $\beta_1, \beta_2, \ldots, \beta_p$ organized into $G$ groups
+$\cG_1, \ldots, \cG_G$, $\bigcup_{g=1}^G \cG_g = \{1, \ldots, p\}$. The group lasso objective function can be
+written as:
+\end{sloppypar}
+\begin{equation}\label{eq:ch4-group-lasso}
+\text{Objective} = \text{Loss Function} + \lambda \sum_{g=1}^G \norm{\beta^g}_2,
+\end{equation}
+where:
+\begin{equation}\label{eq:ch4-group-lasso-norm}
+\begin{cases}
+\norm{\beta^g}_2 = \sqrt{\sum_{i \in \cG_g} \beta_i^2}\ \text{is the L2 norm of the coefficients in group } \cG_g \\
+\lambda > 0\ \text{is the regularization parameter}.
+\end{cases}
+\end{equation}
+
+So, while \textbf{Lasso} applies the L1 penalty to individual coefficients, shrinking
+some of them to zero, the \textbf{Group Lasso} applies the L2 penalty to the coefficients
+within each group but applies the \textbf{L1 penalty} to the norms of these groups.
+This means that the \textbf{entire group of coefficients} is either selected (if the
+group norm is not shrunk to zero) or excluded (if the group norm is shrunk to
+zero).
+
+\begin{example}
+Consider a regression model with several groups of features:
+features $\beta_1, \beta_2$ related to the first category, features $\beta_3, \beta_4$ related to the second
+category and feature $\beta_5$ related to the third category. With group lasso, the
+model might choose to \textbf{keep both} $\beta_1$ and $\beta_2$ together (or discard them entirely)
+but will not allow a situation where only one of the $\beta_1$ or $\beta_2$ is included while
+the other is set to zero. The same applies to the other groups: either a group
+is fully included, or it is excluded entirely.
+\end{example}
+
+This procedure can be applied to \textbf{categorical variables encoded as
+multiple binary features}; in this case it is possible to select or exclude the
+whole category at once. Also for \textbf{multivariate data} where multiple correlated features come from the same source (e.g., multiple sensors or repeated
+\ldots)

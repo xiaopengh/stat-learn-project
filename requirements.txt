@@ -1,0 +1,23 @@
+# Preferred install command:
+#   uv sync
+#
+# This compatibility requirements file mirrors the runtime dependencies in
+# pyproject.toml for tools that require `requirements.txt`.
+# To install directly with uv:
+#   uv pip install -r requirements.txt
+
+ipykernel>=6.29.5
+joblib>=1.4.2
+jupyterlab>=4.3.0
+matplotlib>=3.9.0
+nbconvert>=7.16.4
+nbformat>=5.10.4
+numpy>=2.0.0
+openpyxl>=3.1.5
+pandas>=2.2.2
+pyyaml>=6.0.2
+scikit-learn>=1.5.1
+scipy>=1.14.0
+seaborn>=0.13.2
+ucimlrepo>=0.0.7
+

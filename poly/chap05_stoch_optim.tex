@@ -1,0 +1,225 @@
+\chapter{Stochastic Optimization Algorithms}
+\label{chap:stoch-optim}
+
+Optimization algorithm are an important ingredient in machine learning procedures because usually no analytical solution exists. There does not exist a universal algorithm that solves all problems; therefore the algorithm has to be chosen depending on the situation at hand and the practitioner has to have knowledge about the applicability domain, advantages and disadvantages of the main optimization algorithms.
+
+\section{Deterministic Gradient Descent}
+\label{sec:ch5-deterministic-gd}
+
+There are several ideas that underlie the optimization algorithms. Some use first order information (gradient), other second order information (Hessian and similar) while other do not use any derivatives (downhill simplex, simulated annealing, genetic algorithms, evolution strategies and so on). We will be mainly concerned here with algorithms using the first derivative.
+
+Gradient Descent is an optimization algorithm used to minimize a differentiable function $X \in \cX \mapsto \cL(X) \in \R$. We will take throughout this chapter $\cX = \R^d$ for some dimension $d \geq 1$. Given an initial parameter $X_0$, the update rule is:
+\begin{equation}\label{eq:ch5-gd-update}
+X_{t+1} = X_t - \rho_t \grad \cL(X_t),
+\end{equation}
+where $\rho_t > 0$ is the learning rate and $\grad \cL(X_t)$ is the gradient of the function at step $t$. The method updates all parameters using the exact gradient at each iteration; the procedure is formally described in Algorithm~\ref{alg:ch5-gd} and an illustration is available in Figure~\ref{fig:ch5-sgd-convergence}, first two columns. It is known that this algorithm can converge to local (as opposed to global) solutions so it is rather a critical point identifier.
+
+\begin{figure}[h]\centering
+% FIGURE PLACEHOLDER (uncomment & replace with \includegraphics when image is available):
+% \fbox{\parbox{0.7\linewidth}{\centering\textit{[Figure from PDF page 72: Six-panel plot. Top row shows (S)GD iterates (red dots) over the function graph (blue curve) for three cases: basic convex $f(x)=x^2$ (left), non-convex $f(x)=x^4-3x^3+2$ (middle), and noisy-gradient $f(x)=(x-2)^2$ (right). Bottom row shows the trajectory of the iterates $x_n$ vs iteration index; the non-convex case has two trajectories (two initial points leading to different local minima).]}}}
+\caption{The convergence of (Stochastic) Gradient Descent algorithm for different types of functions: basic, smooth, convex function $x^2$ (left), non-convex smooth function $x^4 - 3x^3 + 2$ (middle) and a smooth function $(x-2)^2$ but with noisy gradients $2 \cdot (x-2) + \sqrt{2} \cdot \cN(0,1)$ (right). For each case top image is the function in blue and iterates as couples of $(x, f(x))$ values in red. The second row pictures represent the $x_n$ values with respect to $n$ iterations. In the non-convex case two initial points are chosen which lead to two different local minima.}
+\label{fig:ch5-sgd-convergence}
+\end{figure}
+
+\begin{advancedtopics}\label{adv:ch5-evolution-eq}
+The idea of the algorithm comes from the evolution equation:
+\begin{equation}\label{eq:ch5-evolution}
+X'(t) = -\grad_X \cL(X(t)),
+\end{equation}
+where $\cL(\cdot)$ is some function to be minimized with respect to the parameters $X$. Immediate computations show that $\frac{d}{dt} \cL(X(t)) = \langle \grad_X \cL(X(t)), -\grad_X \cL(X(t))\rangle = -\norm{\grad_X \cL(X(t))}^2 \leq 0$ so $\cL(X(t))$ decreases along the trajectory $X(t)$; under appropriate hypothesis (for instance those in the LaSalle's theorem) the dynamics can be proven to converge to a minimizer or at least a critical point of $V$. The gradient descent is a Explicit Euler scheme applied to the evolution equation~\eqref{eq:ch5-evolution}.
+\end{advancedtopics}
+
+\begin{algorithm}[h]
+\caption{Gradient Descent (GD)}\label{alg:ch5-gd}
+\begin{algorithmic}[1]
+\Require Loss function $\cL$, initial guess $X_0$, step schedule $\rho_t$.
+\State Initialize $X_0$
+\For{each iteration $t = 0, 1, 2, \ldots$}
+    \State Compute gradient $\grad \cL(X_t)$
+    \State Update parameters: $X_{t+1} = X_t - \rho_t \grad \cL(X_t)$
+\EndFor
+\State Return $X_t$
+\end{algorithmic}
+\end{algorithm}
+
+\section{Stochastic Gradient Descent}
+\label{sec:ch5-sgd}
+
+The performance of the gradient descent depends on the quality of the gradient information it receives. When the function $\cL$ is not strictly convex it may lead to local minima. Two other situations may occur: the computation of the gradient may be subject to (random) errors so we obtain not $\grad \cL(X_t)$ but $\grad \cL(X_t) + $ \textbf{``error''}; another situation is when computing $\grad \cL(X_t)$ is numerically intensive, e.g., when the function to optimize can be written as:
+\begin{equation}\label{eq:ch5-loss-expectation}
+\cL(X) = \E_\omega[L(\omega, X)],
+\end{equation}
+with $(\Omega, F, \PP)$ is a probability space, $L : \Omega \times \R^d \to \R$ a function depending on a random argument $\omega$ and a parameter $X$ to be optimized. In such a case it is not always possible to compute exactly the gradient because the average may be difficult to converge, for instance modern machine learning datasets can have a large number of objects to average over. Stochastic Gradient Descent (SGD) is a variant of GD designed to work in these latter two situations, where the gradient is not exact. It operates iteratively at iteration $t$ as follows:
+\begin{itemize}
+    \item select a (usually deterministic) ``learning rate'' $\rho_t$ (schedule fixed \emph{a priori} or \emph{online})
+    \item draw a random $\omega_t \in \Omega$ following the law $\PP$, independent of any other previous random variables
+    \item update the solution candidate $X_t$:
+    \begin{equation}\label{eq:ch5-sgd-update}
+    X_{t+1} = X_t - \rho_t \grad_X L(\omega_t, X_t).
+    \end{equation}
+\end{itemize}
+
+This procedure introduces noise but significantly speeds up convergence in large-scale problems; the algorithm is given in Algorithm~\ref{alg:ch5-sgd} and an illustration in Figure~\ref{fig:ch5-sgd-convergence}, last column.
+
+\begin{algorithm}[h]
+\caption{Stochastic Gradient Descent (SGD)}\label{alg:ch5-sgd}
+\begin{algorithmic}[1]
+\Require Loss function $L$, initial guess $X_0$, step schedule $\rho_t$.
+\State Initialize $X_0$
+\For{each iteration $t = 0, 1, 2, \ldots$}
+    \State Pick a random sample $\omega_t$ from $\Omega$
+    \State Compute gradient $\grad L(\omega_t, X_t)$
+    \State Update parameters: $X_{t+1} = X_t - \rho_t \grad L(\omega_t, X_t)$
+\EndFor
+\State Return $X_t$
+\end{algorithmic}
+\end{algorithm}
+
+A legitimate question is whether the algorithm converges at all; this is not obvious because any random draw $\omega_t$ may lead the algorithm in directions that optimize $L(\omega, \cdot)$ but not $\cL(\cdot)$. The question is whether these directions will gradually accumulate in a coherent manner or not.
+
+Consider the example in Exercise 5.1; it shows that convergence is to be expected but at the price of choosing adequate learning rate decay schedules. In general the following result holds:
+
+\begin{theorem}\label{thm:ch5-sgd-convergence}
+Suppose that each $L(\omega, \cdot)$ is differentiable (a.e. $\omega \in \Omega$)\footnote{This requirement can be largely weakened.} and that $\cL$ satisfies the hypotheses:
+\begin{enumerate}
+    \item The gradient of $L$ satisfies the following \textbf{quadratic bound}:
+    \begin{equation}\label{eq:ch5-quadratic-bound}
+    \exists C_0, C_1 > 0 : \E_\omega\left[\norm{\grad_X L(\omega, X)}^2\right] \leq C_0 + C_1 \norm{X}^2, \quad \forall X \in \cX.
+    \end{equation}
+    \item $\cL$ satisfies the following \textbf{strong convexity} assumption:
+    \begin{equation}\label{eq:ch5-strong-convexity}
+    \exists \mu_c > 0 : \cL(Y) \geq \cL(X) + \langle \grad \cL(X), Y - X\rangle + \frac{\mu_c}{2} \norm{X - Y}^2, \quad \forall X, Y \in \cX.
+    \end{equation}
+\end{enumerate}
+Then
+\begin{enumerate}
+    \item the function $\cL$ has an unique minimum $X_*$;
+    \item Take $\rho_t$ a sequence such that:
+    \begin{equation}\label{eq:ch5-learning-rate-schedule}
+    \rho_t \to 0 \text{ and } \sum_{t \geq 1} \rho_t = \infty.
+    \end{equation}
+    Then $\lim_{t \to \infty} X_t = X_*$ in the $L^2$ space of random variables\footnote{This means that $\E\left[\norm{X_t - X_*}^2\right] \to 0$.}.
+\end{enumerate}
+\end{theorem}
+
+\begin{proof}
+See \cite{turinici22} for a self-contained proof. It boils down to analyzing the sequence $d_n := \norm{X_n - X_*}^2$ by a recurrence formula.
+\end{proof}
+
+\section{Mini-batch Stochastic Gradient descent}
+\label{sec:ch5-minibatch-sgd}
+
+Consider now the specific situation, very often encountered in Machine Learning applications, when the set $\Omega$ is some learning dataset $\cD_N$ with $N$ objects. We will suppose also that the probability law $\PP$ is uniform. Note that, for instance for a regression, the elements $\omega \in \Omega$ consists in couples $(x_i, y_i)$ of data and labels.
+
+Under appropriate smoothness assumption on the function $L$ the gradient
+\begin{equation}\label{eq:ch5-full-gradient}
+\grad \cL = \frac{\sum_{\omega \in \cD_N} \grad L(\omega_i, X)}{N}
+\end{equation}
+required by the gradient descent can be approximated better by taking, instead of a single sample $\omega_t$ a \textbf{``mini-batch''}, that is several samples, from the dataset $\cD_N$. We need to make clear how the drawing is realized; we will describe a specific example of algorithm, but other variants exits. The learning process (that is the optimization of $\cL$) is split into ``epochs''; one epoch corresponds to a full consideration of the whole dataset $\cD_N$. During a epoch, the dataset is partitioned into ``mini-batches'', usually of equal size $B \in \N$; for simplicity we assume $B$ is an integer divisor of $N$. The partition is done at random. Then, the mini-batches are presented iteratively to the SGD algorithm which updates the parameter $X_t$ using an approximation of $\grad \cL$ computed on the current mini-batch. When all dataset has been listed another epoch begins. The formal description is the algorithm~\ref{alg:ch5-minibatch-sgd}.
+
+\begin{algorithm}[h]
+\caption{Mini-Batch Stochastic Gradient Descent (SGD)}\label{alg:ch5-minibatch-sgd}
+\begin{algorithmic}[1]
+\Require Dataset $\cD_N = \{\omega_i\}_{i=1}^{N}$, loss function $L$, learning rate $\eta > 0$, batch size $B$, number of epochs $n_{\text{epochs}}$
+\State Initialize parameters $X_0$, counter $t$
+\State \textit{/* Loop over epochs */}
+\For{$epoch = 1$ to $n_{\text{epochs}}$}
+    \State Shuffle dataset $\cD_N$
+    \State Partition $\cD_N$ into mini-batches $\mathcal{P}_{epoch} := \{\mathcal{B}_1, \ldots, \mathcal{B}_{N/B}\}$ each of size $B$
+    \State \textit{/* Loop over mini-batches */}
+    \For{each mini-batch $\mathcal{B}_k$ in $\mathcal{P}_{epoch}$}
+        \State Compute gradient estimate (here $|\mathcal{B}_k|$ is the size $B$ of the mini-batch):
+        \begin{equation}\label{eq:ch5-minibatch-gradient}
+        g_t := \frac{1}{|\mathcal{B}_k|} \sum_{\omega \in \mathcal{B}_k} \grad_X L(\omega, X_t)
+        \end{equation}
+        \State Update parameters, counter: $X_{t+1} = X_t - \eta g_t$, $t = t + 1$
+    \EndFor
+\EndFor
+\State \Return $X_t$
+\end{algorithmic}
+\end{algorithm}
+
+\begin{remark}\label{rem:ch5-minibatch-vocabulary}
+As a matter of vocabulary, note that sometimes in the literature the ``mini-batch SGD'' is called ``batch SGD'' while other reserve the term ``batch SGD'' to a exact computation of the gradient on the full dataset.
+\end{remark}
+
+\section{Beyond SGD: Momentum, AdaGrad, RMSProp, Adam}
+\label{sec:ch5-beyond-sgd}
+
+Beyond standard Stochastic Gradient Descent (SGD), there exist several optimization techniques that improve convergence and performance. Some of the most used are presented below.
+
+\subsection{Momentum Stochastic Gradient Descent (SGD + momentum)}
+\label{subsec:ch5-momentum}
+
+Momentum-based SGD enhances standard SGD by incorporating a velocity term that helps smooth updates and accelerates convergence. Instead of using the raw gradient update, it maintains an exponentially decaying moving average of past gradients. We recall the notation $g_t$ introduced in~\eqref{eq:ch5-minibatch-gradient}. The update rule of the Momentum SGD is:
+\begin{align}
+v_t &= \beta v_{t-1} + (1 - \beta) g_t \label{eq:ch5-momentum-velocity}\\
+X_{t+1} &= X_t - \eta v_t, \label{eq:ch5-momentum-update}
+\end{align}
+where $\beta$ is the momentum coefficient (typically around $0.9$) and $v_t$ is the velocity term that accumulates gradients over time.
+
+\subsection{AdaGrad (Adaptive Gradient Algorithm)}
+\label{subsec:ch5-adagrad}
+
+AdaGrad adapts the learning rate for each parameter individually by scaling it based on the historical sum of squared gradients. This technique is particularly effective for sparse data but may lead to overly small learning rates over time. The update rule is:
+\begin{align}
+G_t &= G_{t-1} + g_t \odot g_t \label{eq:ch5-adagrad-accum}\\
+X_{t+1} &= X_t - \frac{\eta}{\sqrt{G_t + \epsilon}} \odot g_t \label{eq:ch5-adagrad-update}
+\end{align}
+where $G_t$ accumulates squared gradients and $\epsilon$ is a small constant to avoid division by zero. The term $\frac{\eta}{\sqrt{G_t+\epsilon}}$ in~\eqref{eq:ch5-adagrad-update} is also to be understood as a component-wise division. Some definitions involving a matrix form for $G_t$ can also be found in the literature.
+
+\subsection{RMSProp (Root Mean Square Propagation)}
+\label{subsec:ch5-rmsprop}
+
+RMSProp is a variant of AdaGrad that improves upon its limitation of decreasing learning rates over time. Instead of accumulating all past squared gradients, RMSProp maintains an exponentially decaying moving average of squared gradients, allowing the learning rate to remain adaptive without becoming too small. The update rule is:
+\begin{align}
+G_t &= \gamma G_{t-1} + (1 - \gamma) g_t \odot g_t \label{eq:ch5-rmsprop-accum}\\
+X_{t+1} &= X_t - \frac{\eta}{\sqrt{G_t + \epsilon}} \odot g_t \label{eq:ch5-rmsprop-update}
+\end{align}
+where $G_t$ is the exponentially weighted moving average of past squared gradients, $\gamma$ is the decay factor (typically set to $0.9$), and $\epsilon$ is a small constant to prevent division by zero.\footnote{As in AdaGrad, $\odot$ denotes component-wise multiplication (Hadamard product), and $\frac{\eta}{\sqrt{G_t+\epsilon}}$ represents component-wise division.}
+
+By controlling the influence of past gradients, RMSProp prevents the learning rate from shrinking too fast, making it more effective for non-stationary and online learning problems.
+
+\subsection{Adam (Adaptive Moment Estimation)}
+\label{subsec:ch5-adam}
+
+Adam is an optimization algorithm that combines the benefits of both Momentum and AdaGrad. It maintains both the first moment (mean) and the second moment (uncentered variance) of the gradients. This allows Adam to adapt the learning rate for each parameter and also to smooth out updates by considering past gradients. The update rule is\footnote{As before the Hadamard product ``$\odot$'' is used.}:
+\begin{align}
+m_t &= \beta_1 m_{t-1} + (1 - \beta_1) g_t, \quad m_0 = 0 \label{eq:ch5-adam-m}\\
+v_t &= \beta_2 v_{t-1} + (1 - \beta_2) g_t \odot g_t, \quad v_0 = 0 \label{eq:ch5-adam-v}\\
+\hat{m}_t &= \frac{m_t}{1 - \beta_1^t} \label{eq:ch5-adam-mhat}\\
+\hat{v}_t &= \frac{v_t}{1 - \beta_2^t} \label{eq:ch5-adam-vhat}\\
+X_{t+1} &= X_t - \eta \frac{\hat{m}_t}{\sqrt{\hat{v}_t} + \epsilon} \label{eq:ch5-adam-update}
+\end{align}
+where\footnote{As in~\eqref{eq:ch5-adagrad-update}, the term $\frac{\eta \hat{m}_t}{\sqrt{\hat{v}_t}+\epsilon}$ in~\eqref{eq:ch5-adam-update} is a component-wise division.}:
+\begin{itemize}
+    \item $\beta_1$ and $\beta_2$ are decay rates for the moment estimates, typically set to $0.9$ and $0.999$, respectively,
+    \item $m_t$ is the estimated first moment (mean of the gradients),
+    \item $v_t$ is the estimated second moment (uncentered variance of the gradients),
+    \item $m_0 = 0$ and $v_0 = 0$ are the initial values, requiring bias correction, see also Exercise 5.2
+    \item $\hat{m}_t$ and $\hat{v}_t$ are bias-corrected estimates of $m_t$ and $v_t$,
+    \item $\epsilon$ is a small constant added to prevent division by zero (typically $10^{-8}$).
+\end{itemize}
+
+The Table~\ref{tab:ch5-algorithms-comparison} summarizes the stochastic algorithms presented in this chapter.
+
+\begin{table}[h]
+\centering
+\begin{tabular}{|l|p{4.5cm}|p{5cm}|}
+\hline
+\textbf{Algorithm} & \textbf{Key Idea} & \textbf{Strengths and Weaknesses} \\
+\hline
+SGD & Uses the gradient of the loss function to update parameters & Simple and effective, but may struggle with slow convergence and noisy updates \\
+\hline
+Momentum SGD & Uses a velocity term to smooth updates & Faster convergence, avoids oscillations, but requires tuning $\beta$ \\
+\hline
+AdaGrad & Adapts learning rates based on past gradients & Good for sparse data, but learning rate shrinks too much over time \\
+\hline
+RMSProp & Maintains an exponentially decaying average of past squared gradients & Prevents learning rates from shrinking too much, works well for non-stationary problems, but requires tuning $\gamma$ \\
+\hline
+Adam & Combines momentum and adaptive learning rates by maintaining both 1st and 2nd moment estimates of the gradient & Robust to noisy gradients, well-suited for sparse data, but can be sensitive to hyperparameters \\
+\hline
+\end{tabular}
+\caption{Comparison of SGD, Momentum SGD, AdaGrad, RMSProp, and Adam}
+\label{tab:ch5-algorithms-comparison}
+\end{table}

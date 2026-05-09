@@ -1,0 +1,26 @@
+project:
+  name: stat-learn-project
+  random_seed: 42
+
+dataset:
+  uci_id: 464
+  target: critical_temp
+
+paths:
+  raw_data: data/raw
+  interim_data: data/interim
+  processed_data: data/processed
+  figures: reports/figures
+  report: reports/report.tex
+
+split:
+  test_size: 0.2
+  random_state: 42
+
+evaluation:
+  metrics:
+    - mse
+    - rmse
+    - mae
+    - r2
+

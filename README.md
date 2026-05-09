@@ -1,35 +1,57 @@
-# 🧪 Superconductivity Critical Temperature Prediction
+# Superconductivity Critical Temperature Prediction
 
-## 📌 Project Overview
+Statistical learning project for Subject 4: predicting the critical temperature `critical_temp` of superconducting materials from 81 physical and chemical covariates.
 
-This project focuses on predicting the **critical temperature (Tc)** of superconducting materials using machine learning techniques. The critical temperature is the temperature below which a material exhibits superconductivity (zero electrical resistance).
+## Project Layout
 
-This is framed as a **regression problem**, where the goal is to estimate a continuous output value based on material properties.
+```text
+.
+├── configs/
+├── data/
+│   ├── raw/
+│   ├── interim/
+│   └── processed/
+├── docs/
+├── notebooks/
+│   └── preliminary_main.ipynb
+├── poly/
+├── reports/
+│   ├── figures/
+│   └── report.tex
+├── scripts/
+├── src/
+├── tests/
+├── pyproject.toml
+├── requirements.txt
+└── uv.lock
+```
 
-## 📊 Dataset
+## Environment
 
-- **Source**: https://archive.ics.uci.edu/ml/datasets/Superconductivty+Data  
-- **Samples**: ~21,000 materials  
-- **Features**: 81 input variables  
-- **Target**: Critical temperature (Tc)  
+This project uses `uv` for Python environment and dependency management.
 
-### 🧾 Input Features
+```bash
+uv sync
+```
 
-The dataset includes 81 engineered physical and chemical features, such as:
+Run commands inside the environment with:
 
-- Thermal conductivity  
-- Atomic radius  
-- Electron affinity  
-- Density  
-- Atomic mass  
-- Valence electron counts  
-- Other derived statistical descriptors of elemental properties  
+```bash
+uv run python --version
+```
 
-### 🎯 Output Variable
+If the environment cannot write to the default user caches, use the project-local fallback:
 
-- **Critical Temperature (Tc)** — continuous numeric value (in Kelvin)
+```bash
+env MPLCONFIGDIR=.matplotlib-cache uv --cache-dir .uv-cache sync
+env MPLCONFIGDIR=.matplotlib-cache uv --cache-dir .uv-cache run python --version
+```
 
-## 📚 References
+The primary dependency source is `pyproject.toml`, with exact resolved versions stored in `uv.lock`. `requirements.txt` is kept as a compatibility file for tools that require it.
 
-- UCI Machine Learning Repository:  
-  https://archive.ics.uci.edu/ml/datasets/Superconductivty+Data  
+## Notes
+
+- The original preliminary notebook is preserved at `notebooks/preliminary_main.ipynb`.
+- Generated figures should be written to `reports/figures/`.
+- The LaTeX report entry point is `reports/report.tex`.
+- Course method references are stored as `.tex` files in `poly/`.

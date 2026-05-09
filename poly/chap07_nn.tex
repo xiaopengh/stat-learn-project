@@ -1,0 +1,472 @@
+\chapter{Neural networks}
+
+Artificial neural networks (ANNs) have a long history, dating back to the 1940s when McCulloch and Pitts introduced the first mathematical model of a neuron.
+
+This early work laid the foundation for the perceptron, a simple neural network proposed by Rosenblatt in 1958, capable of learning linear decision boundaries. The perceptron operates as: $y = \sign(\inner{w}{x} + b)$ with trainable weights $w$ (vector), vector input $x$ and real scalar bias $b$. However, Minsky and Papert \cite{turinici14} demonstrated that single-layer perceptrons cannot solve non-linearly separable problems, such as the XOR function; while this critique led to a decline in neural network research during the subsequent decades, it ultimately motivated the development of multilayer, `deep', architectures.
+
+The rediscovery of backpropagation, introduced by Rumelhart, Hinton, and Williams in 1986, enabled efficient training of deep multilayer perceptrons (MLPs). Subsequent advances in hardware, particularly the use of graphics processing units (GPUs), allowed for the training of deeper networks, leading to the rise of deep learning in the 2010s. Landmark achievements, such as AlexNet's success in the 2012 ImageNet competition, demonstrated the power of deep convolutional neural networks (CNNs) for image recognition. Since then, deep learning architectures, including recurrent neural networks (RNNs) and transformers, have revolutionized fields such as computer vision, natural language processing, and biomedical research. Neural networks power applications ranging from autonomous vehicles to large-scale language models like GPT.
+
+\section{Multi Layer Perceptrons (MLP) Neural networks}
+
+Suppose we have a database $\Omega$; for supervised learning tasks each $\omega \in \Omega$ has an associated label $y_\omega$; the goal is to find a \emph{Neural Network} (NN), that will ``learn'' to assign $y_\omega$ to $\omega$ and will also be able to propose labels for $\omega \notin \Omega$ (prediction phase). In technical terms, the goal of the NN is to `fit' its parameters denoted $X$, so that for any $\omega$ the output of our network be as close as possible to its label $y_\omega$. The setting can be formulated as an optimization problem:
+\begin{equation}\label{eq:ch7-argmin-loss}
+  \argmin_X \left\{ \E_\omega [L(X, \omega)] \right\}.
+\end{equation}
+The function $L$ is called the ``loss function'' and encourages the NN to associate to each $\omega$ its correct label $y_\omega$ previously stored in the dataset. We will also use the overall loss function:
+\begin{equation}\label{eq:ch7-overall-loss}
+  \cL(X) := \E_\omega [L(X, \omega)].
+\end{equation}
+Note that although we do not explicitly write the label $y_\omega$ as an argument of $L$, this information is needed to compute $L$.
+
+We will describe in the following the standard Multi Layer Perceptron (MLP) neural network, also called `feed forward dense neural network' or `sequential fully connected' network. Each network is a parameterized function. It takes an input in some $\R^n$ and outputs some element of $\R^p$. In the simple, sequential, networks that we will study, the network itself is a composition of functions. The functions are organized by `layers' and in general a layer is the composition of two parts:
+\begin{itemize}
+  \item a linear part that transforms the input from $a \in \R^{n_i}$ into $z = Wa + b \in \R^{n_o}$, with $W \in \R^{n_o \times n_i}$ a matrix and $b \in \R^{n_o}$ a column vector;
+  \item an activation function $\cA : \R^{n_o} \to \R^{n_o}$ that transforms the previous $z$ into some $\cA(z) \in \R^{n_o}$.
+\end{itemize}
+
+The first layer is called \emph{input layer} the intermediary ones are called \emph{hidden layers} and the last one is called \emph{output layer}, see figure~\ref{fig:ch7-mlp} for an illustration. To fix notations we will describe the activated output $A^{[\ell+1]}$ of a given layer $\ell+1$, relative to the activated output $A^{[\ell]}$ of the previous layer $\ell$ as
+\begin{equation}\label{eq:ch7-layer-update}
+  Z^{[\ell+1]} = W^{[\ell+1]} A^{[\ell]} + b^{[\ell+1]}, \quad A^{[\ell+1]} = \cA_{\ell+1}\!\left( Z^{[\ell+1]} \right).
+\end{equation}
+
+\begin{figure}[h]\centering
+% FIGURE PLACEHOLDER (uncomment & replace with \includegraphics when image is available):
+% \fbox{\parbox{0.7\linewidth}{\centering\textit{[Figure from PDF page 95: MLP diagram with input layer (dim 4, green nodes), hidden layer 1 (dim 5, yellow nodes) + activation, hidden layer 2 (dim 7, yellow nodes) + activation, and output layer (dim 3, red nodes); fully connected edges between consecutive layers.]}}}
+\caption{Example of a neural network with input of dimension 4, two hidden layers, first having 5 neurons and the second 7, and an output of dimension 3; such an architecture can be used to classify the Iris dataset\cite{turinici14}.}\label{fig:ch7-mlp}
+\end{figure}
+
+We then seek to optimize the weights $W^{[\ell]}$ as well as the biases $b^{[\ell]}$, that is, to optimize:
+\begin{equation}\label{eq:ch7-X-params}
+  X = (W^{[1]}, b^{[1]}, \ldots, W^{[n_L]}, b^{[n_L]}),
+\end{equation}
+where $n_L$ is the number of layers. This minimization is driven by a loss function $\cL(\cdot)$ which describes ``the difference between the estimation by the neural network with parameters $X$ and input $\omega$, and the correct answer for the input example $\omega$''. This minimization can then be performed, for instance, with stochastic algorithms described in Chapter~5. To use an optimization algorithm we need the gradient of $\cL$ with respect to network parameters $X$.
+
+\begin{figure}[h]\centering
+% FIGURE PLACEHOLDER (uncomment & replace with \includegraphics when image is available):
+% \fbox{\parbox{0.7\linewidth}{\centering\textit{[Figure from PDF page 96: three activation function plots side by side: ReLU (piecewise linear, zero for $x<0$, identity for $x\geq 0$), Sigmoid (S-shaped, range $(0,1)$), Tanh (S-shaped, range $(-1,1)$).]}}}
+\caption{Activations functions: ReLU, sigmoid, tanh.}\label{fig:ch7-activations}
+\end{figure}
+
+\subsection{Activation functions}
+
+There are several commonly used activation functions $\cA$, see Figure~\ref{fig:ch7-activations}:
+\begin{itemize}
+  \item the \textbf{ReLU activation}, which takes the positive part:
+  \begin{equation}\label{eq:ch7-relu-def}
+    \ReLU : \R^N \to (\R_+)^N, \quad \ReLU(x_1, \ldots, x_N) = ((x_1)_+, \ldots, (x_N)_+).
+  \end{equation}
+  As an example $\ReLU(3, -2, \sqrt{17}, -\pi) = (3, 0, \sqrt{17}, 0)$. This function is the most used in Neural Networks (NN) because its derivative is very stable (has values 0 or 1) and product of such derivatives will neither explode nor vanish, even if there are many terms in the product. This allows the use of deep networks (that is, containing many hidden layers) and avoids the \emph{exploding / vanishing gradient} problem.
+  \item the \textbf{sigmoid function}, defined in Equation (4.9) $\sigma(x) = \frac{1}{1+e^{-x}}$; it maps the input to an output between 0 and 1, often interpreted as a probability.
+  \item the \textbf{hyperbolic tangent (tanh) function}, given by:
+  \begin{equation}\label{eq:ch7-tanh-def}
+    \tanh : \R \to\, ]-1, 1[, \quad \tanh(x) = \frac{e^x - e^{-x}}{e^x + e^{-x}},
+  \end{equation}
+  which maps real values to the range $]-1, 1[$ and is often used to center activations around zero.
+  \item the \textbf{softmax function}
+  \begin{equation}\label{eq:ch7-softmax-def}
+    s : \R^k \to \Sigma_k := \left\{ x \in \R^k;\, x_k \geq 0,\, \sum_i x_i = 1 \right\},\quad s(x) := \left( \frac{e^{x_i}}{\sum_{j=1}^k e^{x_j}} \right)_{i=1}^{k}.
+  \end{equation}
+  which maps $\R^k$ to the unit simplex $\Sigma_k$; it is mostly used for $k$-class classification, the component $s(x)_i = \frac{e^{x_i}}{\sum_\ell e^{x_\ell}}$ of the result can be interpreted as the probability that the label $i$ is the correct one.
+\end{itemize}
+
+\section{Universal approximation theorem}
+
+An important empirical question is whether neural networks are expressive (rich) enough to be useful in all practical settings. In theoretical terms, this can be reformulated as whether neural networks have the ability to approximate well enough any continuous function; this guarantees their versatility and applicability and ensures that deep learning models can capture real-world continuous dynamics when given sufficient capacity.
+
+We present below a result stating that neural networks are rich enough to represent all continuous functions when at least one hidden layer is present which has as many neurons as necessary; see \cite{turinici14} for more general formulations involving derivatives. We first recall a classical result:
+
+\begin{theorem}[Stone--Weierstrass \cite{turinici14}]\label{thm:ch7-stone-weierstrass}
+Let $X$ be a compact\footnote{In general we require $X$ to be a compact Hausdorff space.} (i.e., closed and bounded) subset of $\R^n$ and let $\cA$ be a subalgebra\footnote{A \textbf{subalgebra} $\cA$ of $C(X, \R)$ is a subset of $C(X, \R)$ that is closed under addition, multiplication, and scalar multiplication. Specifically, if $f, g \in \cA$ and $\alpha \in \R$, then $f + g$, $\alpha f$, and $fg$ must also be in $\cA$.} of $C(X, \R)$, the space of continuous real-valued functions on $X$. If $\cA$ satisfies the following conditions:
+\begin{enumerate}
+  \item \textbf{Separates points:} For every distinct $x, y \in X$, there exists $f \in \cA$ such that $f(x) \neq f(y)$.
+  \item \textbf{Contains constants:} The set $\cA$ contains all constant functions.
+\end{enumerate}
+then $\cA$ is dense in $C(X, \R)$ with respect to the supremum norm, meaning that for every $f \in C(X, \R)$ and every $\varepsilon > 0$, there exists $g \in \cA$ such that
+\[
+  \sup_{x \in X} \abs{f(x) - g(x)} < \varepsilon.
+\]
+\end{theorem}
+
+\begin{example}\label{ex:ch7-polynomials}
+Consider as the set $\cA$ the ensemble of all polynomial functions. Then one can prove that it satisfies the conditions of the theorem thus is a dense set. Same for trigonometric polynomials $a_0 + \sum_{n=1}^{N} a_n \cos(2\pi n x) + b_n \sin(2\pi n x)$ on a compact included in $[0, 1[$.
+
+Sometimes the result is not so intuitive, for instance the, say, polynomials of degree $\geq 17$ and containing constants $\{a_0 + a_{17} x^{17} + \ldots + a_N x^N;\, N \in \N, N \geq 17\}$ form also an universal approximator set and will in particular be as close as we want to the first order polynomial $x$ which does not belong to the set.
+\end{example}
+
+\begin{corollary}\label{cor:ch7-exp-dense}
+Let $X$ be a compact subset of $\R^n$ and consider the set of functions\footnote{Here $\inner{\cdot}{\cdot}$ is the scalar product on $\R^n$.}:
+\begin{equation}\label{eq:ch7-exp-approx}
+  \mathcal{E}_s = \left\{ \sum_{i=1}^{k} c_i \exp(\inner{a_i}{\cdot}) : a_i \in \R^n,\, c_i \in \R,\, k \in \N \right\}.
+\end{equation}
+Then $\mathcal{E}_s$ is dense in $C(X, \R)$, the space of continuous real-valued functions on $X$, with respect to the supremum norm\footnote{Such a set is called a \textbf{universal approximator}.}.
+
+In other words, for any continuous function $f : X \to \R$ and any $\varepsilon > 0$, there exists a finite linear combination of functions of the form $\exp(\inner{a_i}{\cdot})$, $i \leq k$ such that:
+\[
+  \sup_{x \in X} \abs*{f(x) - \sum_{i=1}^{k} c_i \exp(\inner{a_i}{x})} < \varepsilon.
+\]
+\end{corollary}
+
+\begin{proof}
+This results from the Stone--Weierstrass Theorem~\ref{thm:ch7-stone-weierstrass}. For the separation part take $k = 1$ and $a = x - y$.
+\end{proof}
+
+\begin{corollary}\label{cor:ch7-pwl-approx}
+Let $f$ be a continuous real-valued function on a compact set $K \subseteq \R$. For any $\varepsilon > 0$, there exists a piecewise linear function $L$ such that
+\[
+  \sup_{x \in K} \abs{f(x) - L(x)} < \varepsilon.
+\]
+\end{corollary}
+
+\begin{proof}
+Note that the set is \textbf{not a subalgebra}! Nevertheless, by the Stone--Weierstrass approximation Theorem~\ref{thm:ch7-stone-weierstrass}, there exists a polynomial $p(x)$ such that:
+\[
+  \sup_{x \in K} \abs{f(x) - p(x)} < \varepsilon/2.
+\]
+Next, we approximate $p(x)$ by a piecewise linear function. Partition the interval $[a, b] := [\min(K), \max(K)]$ into subintervals using points $\{x_0, x_1, \ldots, x_n\}$. For each subinterval $[x_i, x_{i+1}]$, define the linear function $L_i(x)$ passing through $(x_i, p(x_i))$ and $(x_{i+1}, p(x_{i+1}))$. Construct the piecewise linear function $L(x)$ as:
+\[
+  L(x) = L_i(x) \quad \text{for } x \in [x_i, x_{i+1}].
+\]
+By making the partition sufficiently fine, we can ensure that
+\[
+  \sup_{x \in K} \abs{p(x) - L(x)} < \varepsilon/2.
+\]
+Thus, by the triangle inequality, we obtain:
+\[
+  \sup_{x \in K} \abs{f(x) - L(x)} \leq \sup_{x \in K} \abs{f(x) - p(x)} + \sup_{x \in K} \abs{p(x) - L(x)} < \varepsilon/2 + \varepsilon/2 = \varepsilon.
+\]
+Therefore, $L(x)$ uniformly approximates $f(x)$ on $K$.
+\end{proof}
+
+\begin{corollary}\label{cor:ch7-NN1-dense}
+Let $K$ be a compact of $\R^n$. The set of functions:
+\begin{equation}\label{eq:ch7-NN1-def}
+  \cN\cN_1 := \left\{ \sum_{i=1}^{k} \alpha_i \ReLU(\inner{a_i}{\cdot} + b_i) : a_i, b_i \in \R^n,\, \alpha_i \in \R,\, k \in \N \right\}
+\end{equation}
+is dense in $C(K; \R)$ with respect to the supremum norm.
+\end{corollary}
+
+\begin{proof}
+We invoke first Corollary~\ref{cor:ch7-exp-dense}. All that remains to show is that for $y = \inner{a}{x}$ one can approximate the real function $y \mapsto \exp(y)$ on a compact with linear combinations of ReLU functions. We recall that $\ReLU(x) = x_+$. In $\R$ one can take the difference of two functions $y \mapsto (ay + b)_+$ and $y \mapsto (ay + b')_+$ to obtain a function that is linear between $-b/a$ and $-b'/a$ and constant otherwise. The sum of such functions generates all piecewise linear functions on $\R$ and we conclude using Corollary~\ref{cor:ch7-pwl-approx}.
+\end{proof}
+
+\begin{proposition}\label{prop:ch7-universal-approx}
+Consider a fully connected neural network with input in $K \subset \R^n$, $K$ compact, output in $\R^p$ and a hidden layer with ReLU activation (last layer has no activation, also called `linear' activation). When the dimension of the hidden layer is arbitrary and the weights and biases too, the set of functions defined by this neural network is dense in $C(K; \R^p)$.
+\end{proposition}
+
+\begin{proof}
+Denote $\alpha_{i,j} = W^{[2]}_{i,j}$ the weight matrix of the second layer, chose second layer bias $b^{[2]}$ to be zero, and denote $a_i$ the $i$-th row of the first layer weight matrix $W^{[1]}$, $b_i$ the $i$-th component of the first layer bias $b^{[1]}$. Then the result of the network is the vector $\left( \sum_i \alpha_{i,j} \ReLU(\inner{a_i}{\cdot} + b_i) \right)_{j=1}^{p}$. Any component of the network output is a function in the set $\cN\cN_1$ in \eqref{eq:ch7-NN1-def} and vice-versa, any set of $p$ functions in $\cN\cN_1$ can be obtained setting conveniently the parameters $\alpha$ and $a$; if needed we can set some coefficients $\alpha_{i,j}$ to zero for $a_i$ that are not required for the dimension $j$. So it is enough to prove the result only for a component i.e., can assume $p = 1$ and prove that $\cN\cN_1$ is dense in $C(K; \R)$. The conclusion is obtained using the Corollary~\ref{cor:ch7-NN1-dense}.
+\end{proof}
+
+\begin{tcolorbox}[advancedbox]
+\begin{advancedtopics}\label{adv:ch7-deep-narrow}
+In practice the hypothesis of having a hidden layer with very large width (dimension) can be too restrictive. Similar results exist assuming that the hidden layers have bounded dimension but there are infinitely many of them (arbitrary depth network) \cite{turinici14}, see below for an example in 1D.
+\end{advancedtopics}
+\end{tcolorbox}
+
+\begin{theorem}[Universal approximation in $\R$ by arbitrarily deep ReLU networks of limited width]\label{thm:ch7-deep-narrow}
+Consider a fully connected neural network with input in a compact interval $K \subset \R$, output in $\R$, ReLU activation in all hidden layers, and linear activation in the output layer. Assume that the hidden layers all have at least $w \geq 4$ neurons (width) and the number of layers (depth) is arbitrary. Then the set of functions represented by such networks is dense in $C(K; \R)$.
+\end{theorem}
+
+\begin{proof}
+It is known that continuous functions on the compact interval $K$ can be uniformly approximated by continuous piecewise linear (PWL) functions.
+
+Thus it suffices to show that any PWL function on $K$ can be represented exactly by a ReLU network of width 5 and suitable depth.
+
+Let $g$ be a PWL function with breakpoints $t_1 < \cdots < t_m$. It has the representation
+\begin{equation}\label{eq:ch7-pwl-repr}
+  g(x) = a_0 + a_1 x + \sum_{k=1}^{m} c_k \ReLU(x - t_k).
+\end{equation}
+
+Several strategies can be devised, for instance at layer $k$ one can have:
+\begin{itemize}
+  \item Neuron 1 propagates a large constant $C > 0$; uses at input only neuron 1 from previous layer, no bias
+  \item Neuron 2 propagates $x + C$, hence always positive, uses at input only neuron 2 from previous layer, no bias
+  \item Neuron 3 computes $\ReLU(x - t_k)$; uses as input neuron 2 from previous layer, bias $t_k + C$
+  \item Neuron 4 uses as input neurons 3 and 4 of previous layer (no bias) to compute $f_{k-1}(x) + C = (f_{k-2}(x) + C) + c_{k-1} \ReLU(x - t_{k-1})$
+\end{itemize}
+All these quantities remain nonnegative thanks to the offset $C$, hence ReLU does not clip them except at the breakpoint where the new hinge is created. Thus each layer can introduce one new breakpoint and carry the current sum forward.
+
+Thus every PWL function is realizable by a width-5 ReLU network of sufficient depth. Because PWL functions are dense in $C(K)$, the claim follows.
+\end{proof}
+
+\section{Worked-out example: cross-entropy softmax classification}
+
+Classification tasks in deep learning are commonly solved using neural networks trained with the cross-entropy loss. In this section, we explore a concrete example of a dense neural network applied to classification and derive the gradient of the softmax cross-entropy loss. Input data are supposed to be vectors of $\R^d$ and output a category in the set $\{c_1, c_2, \ldots, c_k\}$. A dataset is provided that contains couples of input vectors and associated labels. The dataset is also supposed randomly mixed (shuffled) and divided into training and test parts.
+
+\subsection{Architecture}
+
+We consider the fully connected neural network in Figure~\ref{fig:ch7-mlp} with $n_L = 3$ layers, ReLU activations for hidden layers and softmax activation for the output layer. Input has a $d = 4$ dimensions, hidden layers have $m = 5$ and, respectively, $n = 7$ neurons and the output is $k = 3$ dimensional. This network can, for instance, be used for the classical Iris dataset \cite{turinici14} that has 3 output categories.
+\begin{itemize}
+  \item Input layer: $a^{[0]} \in \R^d$ (column vector)
+  \item Hidden layer 1:
+  \begin{equation}\label{eq:ch7-hidden1}
+    z^{[1]} = W^{[1]} a^{[0]} + \mathbf{b}^{[1]}, \quad a^{[1]} = \ReLU(z^{[1]}),
+  \end{equation}
+  where $W^{[1]} \in \R^{m \times d}$ is the weight matrix of the layer, $z^{[1]}$ the non-activated outputs of the layer, $a^{[1]}$ the activated outputs and $b^{[1]}$ the bias, last three being column vectors in $\R^m$;
+  \item Hidden layer 2:
+  \begin{equation}\label{eq:ch7-hidden2}
+    \begin{aligned}
+      z^{[2]} &= W^{[2]} a^{[1]} + \mathbf{b}^{[2]}, \quad a^{[2]} = \ReLU(z^{[1]}), \\
+      W^{[2]} &\in \R^{n \times m} \text{ and } z^{[2]}, a^{[2]}, b^{[2]} \in \R^n,
+    \end{aligned}
+  \end{equation}
+  \item Output layer (logits):
+  \begin{equation}\label{eq:ch7-output-logits}
+    z^{[3]} = W^{[3]} a^{[2]} + b^{[3]}, \quad W_3 \in \R^{k \times n} \text{ and } z^{[3]}, b^{[3]} \in \R^k,
+  \end{equation}
+  \item Softmax activation: $y = s(z^{[3]})$ that is, from formula \eqref{eq:ch7-softmax-def}, $y_i = \frac{e^{z^{[3]}_i}}{\sum_{\ell=1}^{k} e^{z^{[3]}_\ell}}$.
+\end{itemize}
+The output $\mathbf{y} \in \R^k$ represents the predicted class probabilities and are obtained from the softmax function which converts logits $\mathbf{z}$ into probabilities using the softmax formula~\eqref{eq:ch7-softmax-def}.
+
+\subsection{One-hot encoding}
+
+We now have to express the loss function. We choose the cross-entropy loss, see also (4.27) page~49. Note that in particular this means that labels in $\{c_1, \ldots, c_k\}$ have to be converted to probability laws. We use exactly the same convention as in logistic regression, that is, the \textbf{one-hot encoding}. One-hot encoding is a method used to represent categorical variables as binary vectors, i.e., vectors with values 0 or 1. Given a categorical variable with $k$ possible classes, each category is mapped to a unique $k$-dimensional binary vector, where exactly one element is 1 (indicating the presence of that category) and all other elements are 0.
+
+\begin{figure}[h]\centering
+% FIGURE PLACEHOLDER (uncomment & replace with \includegraphics when image is available):
+% \fbox{\parbox{0.7\linewidth}{\centering\textit{[Figure from PDF page 103: three one-hot encoded columns for Red/Green/Blue categories. OneHot(Red)=(1,0,0), OneHot(Green)=(0,1,0), OneHot(Blue)=(0,0,1) shown as coloured column vectors with labels Red/Green/Blue.]}}}
+\caption{Example of one-hot encoding for three colors.}\label{fig:ch7-onehot}
+\end{figure}
+
+If we have a categorical variable $c$ that takes values in the set $\{c_1, c_2, \ldots, c_k\}$, then the one-hot encoded vector $\mathbf{e}(c) \in \R^k$ is defined as:
+\begin{equation}\label{eq:ch7-onehot-def}
+  \textbf{One hot encoding:}\quad e_i(c) = \begin{cases} 1, & \text{if } c = c_i, \\ 0, & \text{otherwise.} \end{cases}
+\end{equation}
+
+\begin{example}\label{ex:ch7-onehot-colors}
+Consider a categorical variable representing colors: $\{\text{Red, Green, Blue}\}$. The one-hot encoding is: $e(\text{Red}) = (1, 0, 0)$, $e(\text{Green}) = (0, 1, 0)$, $e(\text{Blue}) = (0, 0, 1)$. An illustration is given in Figure~\ref{fig:ch7-onehot}.
+\end{example}
+
+\subsection{Prediction phase}
+
+For an output $y$ given by the Neural Network the prediction of the network is to choose the most probable category. formally this means that we predict $c_{\argmax\{y_\ell, \ell = 1, \ldots, k\}}$ that is the label corresponding to the category with largest $y_\ell$. In case of ties one can either choose one solution at random or bias in favor of some of them.
+
+\subsection{Cross entropy loss}
+
+The unknowns are $W^{[1]}, b^{[1]}, \ldots, W^{[3]}, b^{[3]}$ regrouped in the variable $X$ as in \eqref{eq:ch7-X-params}; the loss \eqref{eq:ch7-overall-loss} has to be defined for any data point $\omega = (a^{[0]}, c) \in \R^d \times \{c_1, \ldots, c_k\}$ ($c$ is the ``true'' label of the data $a^{[0]}$; this is stored in the training dataset); Denoting $y$ the output of the NN with input $a^{[0]}$, the loss is given by:
+\begin{equation}\label{eq:ch7-crossentropy-loss}
+  L(X, \omega) = -\sum_{i=1}^{k} e_i(c) \log y_i.
+\end{equation}
+
+This loss may seem less intuitive than, for instance, the choice $\norm{e(c) - y}^2$ but we will see that, in fact, it results in simpler gradient formulas.
+
+Recall that for any two discrete laws $p, q \in \Sigma_k$ the cross-entropy (with reference $p$) is (see (4.27)): $H(p, q) = -\sum p_i \log(q_i)$ and is related to the Kullback--Leibler divergence\footnote{The interpretation as an expectancy can be used to define the KL divergence for continuous distributions.}, also called \emph{relative entropy} denoted $KL$:
+\begin{equation}\label{eq:ch7-KL-def}
+  \textbf{Kullback--Leibler divergence:} \quad KL(p \| q) := \sum_{i=1}^{k} p_i \log\!\left( \frac{p_i}{q_i} \right) = \E_{x \sim p}\!\left[ \log\!\left( \frac{p(x)}{q(x)} \right) \right].
+\end{equation}
+
+Its usefulness comes from the result:
+
+\begin{lemma}\label{lem:ch7-KL-minimum}
+Consider $p \in \Sigma_k$ fixed. The function $q \in \Sigma_k \mapsto H(p, q) = -\sum_{i=1}^{k} p_i \log(q_i)$ has an unique minimum when $q = p$. In particular so does $q \mapsto KL(p \| q)$.
+\end{lemma}
+
+\begin{proof}
+First, note that $H(p, q)$ can have unbounded values. This can happen when some $q_i$ are null; when $q_i = 0$ and $p_i > 0$ the value is $-\infty$. On the other hand, when $q_i = 0 = p_i$ we invoke continuity and assign $0 \log(0) = \lim_{x \to 0, x \geq 0} x \log(x) = 0$. Therefore the terms with $p_i = 0$ can be omitted in the sequel without any impact on the cross entropy $H$. Denote $\mathcal{I} = \{i; p_i > 0\}$. We use the strict concavity of the `log' function:
+\begin{equation}\label{eq:ch7-KL-proof}
+  \begin{aligned}
+    \sum_{i=1}^{k} p_i \log(q_i) &= \sum_{i \in \mathcal{I}} p_i \log(q_i) = \sum_{i \in \mathcal{I}} p_i \log\!\left( \frac{q_i}{p_i} \right) + \sum_{i \in \mathcal{I}} p_i \log(p_i) \\
+    &\leq \sum_{i \in \mathcal{I}} p_i \log(p_i) + \log\!\left( \sum_{i \in \mathcal{I}} p_i \frac{q_i}{p_i} \right) \leq \sum_{i \in \mathcal{I}} p_i \log(p_i),
+  \end{aligned}
+\end{equation}
+where we used that $\sum q_i \leq 1$. The equality takes place only if $q_i / p_i$ is constant for all $i \in \mathcal{I}$ and $\sum_{i \in \mathcal{I}} q_i = 1$ which means $p = q$. In particular this proves the minimization property.
+\end{proof}
+
+\subsection{Backward propagation}\label{sec:ch7-backprop}
+
+To optimize the loss one needs to be able to compute its gradient. This step is called `back-propagation'. First we need the derivative of the loss with respect to the logits $z^{[3]}$. Using the softmax derivative formula $\frac{\partial y_i}{\partial z^{[3]}_j} = y_i (\delta_{ij} - y_j)$, we obtain $\frac{\partial L}{\partial z^{[3]}_i} = y_i - e_i(c)$ i.e.,
+\begin{equation}\label{eq:ch7-grad-logits}
+  \grad_{z^{[3]}} L(X, \omega) = y - e(c) \in \R^k \quad \text{(column vector)}.
+\end{equation}
+
+This result simplifies backpropagation: the gradient of the loss with respect to logits is simply the difference between the predicted probability and the true label and is simpler than the naive choice $\norm{e(c) - y}^2$ which gives a more complicated result.
+
+To operate stochastic optimization algorithms as described in Chapter~5 we also need the full gradient $\grad_X L$ that is $\grad_{W^{[i]}} L$ and $\grad_{b^{[i]}} L$ for $i = 1, 2, 3$. The computation uses the chain rule and the general procedure is described in detail in \cite[Chapter 3]{turinici14}; in practice this is used via specialized packages such as Tensorflow, Pytorch, Jax and so on. For our particular case it reads:
+\begin{align}
+  \grad_{W^{[3]}} L &= \grad_{z^{[3]}} L \times (a^{[2]})^T \in \R^{k \times n} \label{eq:ch7-bp-W3} \\
+  \grad_{b^{[3]}} L &= \grad_{z^{[3]}} L \in \R^k \label{eq:ch7-bp-b3} \\
+  \grad_{a^{[2]}} L &= (W^{[3]})^T \grad_{z^{[3]}} L \in \R^n \label{eq:ch7-bp-a2} \\
+  \grad_{z^{[2]}} L &= \grad_{a^{[2]}} L \odot \ind_{z^{[2]} \geq 0} \in \R^n, \label{eq:ch7-bp-z2}
+\end{align}
+and the same continues for the other layers (adapt the index of the layer). In particular for $\grad_{z^{[2]}} L$ the derivative $\ind_{z \geq 0}$ of the $\ReLU(z)$ function was used. Note that the computation has to be done in the indicated order because latter terms such as $\grad_{z^{[2]}} L$ need previous ones such as $\grad_{a^{[2]}} L$. For this reason we compute $\grad_{z^{[2]}} L$ which is not needed by the optimization algorithm but is required to compute $\grad_{W^{[2]}} L, \grad_{b^{[2]}} L$. For completeness here are the remaining backward computations:
+\begin{align}
+  \grad_{W^{[2]}} L &= \grad_{z^{[2]}} L \times (a^{[1]})^T \in \R^{n \times m} \label{eq:ch7-bp-W2} \\
+  \grad_{b^{[2]}} L &= \grad_{z^{[2]}} L \in \R^n \label{eq:ch7-bp-b2} \\
+  \grad_{a^{[1]}} L &= (W^{[2]})^T \grad_{z^{[2]}} L \in \R^m \label{eq:ch7-bp-a1} \\
+  \grad_{z^{[1]}} L &= \grad_{a^{[1]}} L \odot \ind_{z^{[1]} \geq 0} \in \R^m, \label{eq:ch7-bp-z1} \\
+  \grad_{W^{[1]}} L &= \grad_{z^{[1]}} L \times (a^{[0]})^T \in \R^{m \times d} \label{eq:ch7-bp-W1} \\
+  \grad_{b^{[1]}} L &= \grad_{z^{[1]}} L \in \R^m \label{eq:ch7-bp-b1} \\
+  \grad_{a^{[0]}} L &= (W^{[1]})^T \grad_{z^{[1]}} L \in \R^d. \label{eq:ch7-bp-a0}
+\end{align}
+
+Once the routine that computes the gradient is available, one of the stochastic optimization algorithms as in Section~5.3 can be used. Sometimes cross-validation is used, see Section~4.6, but this is not always possible because training time is important. So in practice often the initial dataset is partitioned into three parts:
+\begin{itemize}
+  \item the `training' dataset: for finding optimal parameters of the network;
+  \item the (sometimes called `development') `validation' dataset: to evaluate the quality of converged model in order to adjust the hyper-parameters (for instance, the learning rate of stochastic algorithm); if necessary, return to training dataset and run again the optimization algorithm;
+  \item the `test' dataset is used last to evaluate the final, overall quality of the solution.
+\end{itemize}
+
+\section{Beyond simple architectures}
+
+Not all networks are of the sequential type presented here. For instance, a simple U-Net / ResNet with dense layers consists of:
+\begin{itemize}
+  \item a layer transforming the input into a bottleneck representation (compressed feature space) which is a vector with few dimensions;
+  \item a concatenation of the input and the bottleneck representation is taken as input to a layer that constructs the output;
+\end{itemize}
+Such a neural network is presented in Figure~\ref{fig:ch7-nonseq}. More complicated architectures have also been used that employ many layers and are non-sequential, as the Inception \cite{turinici14}, cf. Figure~\ref{fig:ch7-inception}.
+
+\begin{figure}[h]\centering
+% FIGURE PLACEHOLDER (uncomment & replace with \includegraphics when image is available):
+% \fbox{\parbox{0.7\linewidth}{\centering\textit{[Figure from PDF page 107: a block diagram with three nodes: ``Input Layer'' (top-left), ``Output Layer'' (top-right), ``Bottleneck Dense Layer'' (bottom-center). Arrows go Input $\to$ Bottleneck, Bottleneck $\to$ Output, and Input $\to$ Output directly.]}}}
+\caption{A non-sequential neural network.}\label{fig:ch7-nonseq}
+\end{figure}
+
+\begin{figure}[h]\centering
+% FIGURE PLACEHOLDER (uncomment & replace with \includegraphics when image is available):
+% \fbox{\parbox{0.7\linewidth}{\centering\textit{[Figure from PDF page 107: schematic of the ``Inception'' architecture, an elongated sequence of 9 identical inception blocks (stacks of small coloured layer icons) with some initial and final layers on either side.]}}}
+\caption{``Inception'' network architecture, see \cite{turinici14} for details. The structure features 9 identical inception blocks and some initial and final layers.}\label{fig:ch7-inception}
+\end{figure}
+
+\section{Further layer types}
+
+Neural networks layers have evolved beyond simple dense transformations, here are some alternatives:
+\begin{itemize}
+  \item \textbf{Convolutional Layers (CNNs):} Extract spatial features by applying filters, commonly used in image processing. These layers are useful because have very sparse matrices (many zero entries) as compared with dense layers yet obtain good results in practice. Such layers are made to exploit \textbf{joint relevance} or correlation between some dimensions of the data; for instance when data has a spatial dimension it is normal to assume that dimensions corresponding to neighboring points are related.
+  \item \textbf{Recurrent Layers (RNNs, LSTMs, GRUs):} Process sequential data by maintaining hidden states across time steps. These are useful when input is naturally formulated as a sequence of objects.
+  \item \textbf{Batch Normalization:} Normalizes activations to stabilize training and improve convergence.
+  \item \textbf{Dropout:} Regularization technique that randomly drops $p\%$ of the neurons during training to prevent overfitting. It has no trainable parameters, the dropout rate $p$ is set as a hyper-parameter
+  \item \textbf{Concatenation:} concatenate two inputs; used in specific layer architectures such as U-net or some CNN-type processing; it has no trainable parameters
+  \item \textbf{Pooling:} reduce dimension by summarizing local information by functions such as ``maximum'', or ``average''. For instance a $2n \times 3m$ input reduces to $n \times m$ by a $(2, 3)$ max-pooling layer; it has no trainable parameters
+  \item \textbf{Flatten:} reshapes input to a one-dimensional object; it has no trainable parameters
+  \item \textbf{Transformer Layers:} Use self-attention mechanisms to model long-range dependencies, fundamental in NLP.
+\end{itemize}
+
+\section{Generative AI: conditional \& unconditional}
+
+In section~7.3 we saw an example of use of neural networks in classification tasks. But NNs can also be used in generative settings.
+
+\textbf{Unconditional generation:} in this situation the learning dataset $\cD_N$ has no labels but just examples of objects $\cD = \{X_1, \ldots, X_N\}$ sampled from some unknown law $\mu$. The goal is to find a way to sample new objects from the target distribution $\mu$. One example of task is, when $\cD$ is the MNIST dataset and the goal is to generate new images of handwritten figures.
+
+As a network is just a function, in practice one possibility is to construct a function $f$, through a NN, such that the image of some prior, given, distribution $\mu_p$ through $f$ be equal to the target distribution $\mu$; the image is denoted $f \# \mu_p$\footnote{This is also called the pushforward of $\mu_p$ by $f$, see Section~A.4.4.} and thus we want $f \# \mu_p \sim \mu$. The prior distribution $\mu_p$ is usually taken to be a classical law such as a standard multivariate Gaussian. So the formulation could be of the type: minimize the distance between the distributions $f \# \mu_p$ and $\frac{1}{N} \sum_{x \in \cD_N} \delta_x$ with $\delta_x$ being a Dirac mass in $x$. Each particular procedure chooses its own definition of the statistical distance and the way to work with it.
+
+\begin{example}[Kernel MMD distance]\label{ex:ch7-MMD}
+Let $\mu$ and $\nu$ be two probability distributions over $\R^d$. We define the squared Maximum Mean Discrepancy (MMD) between $\mu$ and $\nu$ using a function $k$ called `kernel'. One example is the Gaussian kernel $k(x, y) = \exp\!\left( -\frac{\norm{x-y}^2}{2 \sigma^2} \right)$ but many other exist. We will suppose $k$ to be symmetric. The formal definition for the MMD distance and its induced MMD norm is:
+\begin{equation}\label{eq:ch7-MMD-def}
+  d_{MMD}(\nu_1, \nu_2)^2 := \norm{\nu_1 - \nu_2}^2_{MMD} := \iint k(x, y) (\nu_1 - \nu_2)(dx)(\nu_1 - \nu_2)(dy).
+\end{equation}
+As a particular case, when $\nu_1 = \sum_a \alpha_a \delta_{x_a}$, $\nu_2 = \sum_b \beta_b \delta_{y_b}$ with $\alpha_a, \beta_b \geq 0$, $\sum_a \alpha_a = 1 = \sum_a \beta_b$ we have:
+\begin{equation}\label{eq:ch7-MMD-discrete}
+  \begin{aligned}
+    d_{MMD}\!\left( \sum_a \alpha_a \delta_{x_a}, \sum_b \beta_b \delta_{y_b} \right)^2 = &\sum_{a, a'} \alpha_a \alpha_{a'} k(x_a, x_{a'}) + \sum_{b, b'} \beta_b \beta_{b'} k(y_b, y_{b'}) \\
+    &- 2 \sum_{a, b} \alpha_a \beta_b k(x_a, y_b).
+  \end{aligned}
+\end{equation}
+Assume we are given two i.i.d. samples: $\{x_1, x_2, \ldots, x_m\} \sim \nu_1$ and $\{y_1, y_2, \ldots, y_n\} \sim \nu_2$. An unbiased estimator of $d_{MMD}(\nu_1, \nu_2)^2$ is:
+\begin{equation}\label{eq:ch7-MMD-estimator}
+  \frac{1}{m(m-1)} \sum_{i \neq j} k(x_i, x_j) + \frac{1}{n(n-1)} \sum_{i \neq j} k(y_i, y_j) - \frac{2}{mn} \sum_{i=1}^{m} \sum_{j=1}^{n} k(x_i, y_j).
+\end{equation}
+Numerical Example (1D): Let samples be $\{0, 1\}$ and $\{2, 3\}$ and take $\sigma = 1$. Compute: $k(0, 1) = \exp\!\left( -\frac{(0-1)^2}{2} \right) = e^{-0.5}$, $k(2, 3) = \exp\!\left( -\frac{(2-3)^2}{2} \right) = e^{-0.5}$, $k(0, 2) = \exp\!\left( -\frac{(0-2)^2}{2} \right) = e^{-2}$, $k(0, 3) = e^{-4.5}$, $k(1, 2) = e^{-0.5}$, $k(1, 3) = e^{-2}$.
+
+Now compute the estimator components:
+
+Intra-$x$ $\frac{1}{2(2-1)}[k(0,1) + k(1,0)] = k(0,1) = e^{-0.5}$
+
+Intra-$y$ $\frac{1}{2(2-1)}[k(2,3) + k(3,2)] = k(2,3) = e^{-0.5}$
+
+Cross terms $\frac{1}{2 \cdot 2}(k(0,2) + k(0,3) + k(1,2) + k(1,3)) = \frac{1}{4}(e^{-2} + e^{-4.5} + e^{-0.5} + e^{-2})$
+
+Finally the estimator is:
+\begin{equation}\label{eq:ch7-MMD-numerical}
+  \begin{aligned}
+    &e^{-0.5} + e^{-0.5} - 2 \cdot \frac{1}{4}(e^{-2} + e^{-4.5} + e^{-0.5} + e^{-2}) \\
+    &= 2 e^{-0.5} - \frac{1}{2}(2 e^{-2} + e^{-4.5} + e^{-0.5}) = \frac{3}{2} e^{-0.5} - e^{-2} - \frac{1}{2} e^{-4.5}.
+  \end{aligned}
+\end{equation}
+\end{example}
+
+The estimator \eqref{eq:ch7-MMD-estimator} is used as follows: draw a sample $\{y_1, \ldots, y_n\}$ from the prior $\mu_p$ law and one from the dataset $\{x_1, \ldots, x_m\}$. Then the loss is the estimator computed with $\{NN(y_1), \ldots, NN(y_n)\}$ and $\{x_1, \ldots, x_m\}$ where $NN$ is the neural network to be trained. At each training step new samples are drawn.
+
+\begin{tcolorbox}[advancedbox]
+\begin{advancedtopics}\label{adv:ch7-MMD-proof}
+The fact that $d_{MMD}$ is a distance is not trivial to prove. In general this results from the properties of the kernel; for the gaussian kernel one can use the identity $k(x, y) = c_\sigma \int k(x, z) k(y, z) dz$, $c_\sigma > 0$ to realize that, denoting $G(z) = \int k(x, z) (\nu_1 - \nu_2)(dx)$ we obtain $d(\nu_1, \nu_2)^2 = (c_\sigma)^{-1} \int G(z)^2 dz \geq 0$.
+A more systematic view is to consider a kernel embedding of the measures and use the distance between the embeddings. For instance the measure $(\delta_a + \delta_b)/2$ is associated with a mixture of gaussians with means $a$ and $b$ and having the same variance. The distance between the distributions can be the $L^2$ distance between the densities of the mixtures. In general Reproducing Kernel Hilbert Spaces (RKHS) is the best formalization level for this task.
+\end{advancedtopics}
+\end{tcolorbox}
+
+\textbf{Conditional generation:} in this case the dataset is as in (1.1): $\cD = \{(X_i, Y_i)\}_{i=1}^{N}$, $X_i \in \cX$, $Y_i \in \cY$ with $(X_i, Y_i)$ drawn from some law $\nu$. The goal is to generate objects from the conditional law $\nu(Y | X)$; for instance when $\cD$ is the (full) MNIST dataset (including labels) then given some label we may want to generate a new handwritten figure representing the label. Another example are text to image generators that, given a text prompt generate an image that corresponds to that description. ChatGPT also follows the same pattern: generated text from a text prompt. As before, NNs are used to create special functions that are then applied to the input condition $X$ and some randomness argument and output a new object $Y$ following the law $\nu(Y | X)$.
+
+\section{Exercises NN}
+
+\begin{tcolorbox}[remarkbox]
+\textbf{Exercise 7.1} (Universal approximators). Prove that the MLP networks in \eqref{eq:ch7-layer-update} with $n_L > 2$, last layer with no activation and last hidden layer dimension as large as necessary form an universal approximator set. Same if hidden layers before the last one are combined with Concatenation layers.
+\end{tcolorbox}
+
+\begin{tcolorbox}[remarkbox]
+\textbf{Exercise 7.2} (KL for 1D normals). Show that:
+\begin{equation}\label{eq:ch7-KL-normals}
+  KL\left( \cN(\mu_1, \sigma_1^2) \,\|\, \cN(\mu_2, \sigma_2^2) \right) = \log\!\left( \frac{\sigma_2}{\sigma_1} \right) + \frac{\sigma_1^2 + (\mu_1 - \mu_2)^2}{2 \sigma_2^2} - \frac{1}{2}
+\end{equation}
+\end{tcolorbox}
+
+\begin{tcolorbox}[remarkbox]
+\textbf{Exercise 7.3} (KL and independence). Prove that KL divergence is additive for independent distributions: if $P_1$, $P_2$ are independent and same for $Q_1$, $Q_2$ then denoting $P$ the joint distribution of $(P_1, P_2)$ and $Q$ for $(Q_1, Q_2)$:
+\begin{equation}\label{eq:ch7-KL-additive}
+  KL(P \| Q) = KL(P_1 \| Q_1) + KL(P_2 \| Q_2).
+\end{equation}
+\end{tcolorbox}
+
+\begin{tcolorbox}[remarkbox]
+\textbf{Exercise 7.4} (ReLU networks). We recall the ReLU function $\ReLU(x) = x_+$. Suppose that we have a NN with dense layers and ReLU activation from $\R$ to $\R$, but hidden layers can have larger dimensions. Prove that the output is a continuous, piecewise linear function of the input.
+\end{tcolorbox}
+
+\begin{tcolorbox}[remarkbox]
+\textbf{Exercise 7.5} (gradient vanishing). Consider a sequential network where all input and output dimensions are equal to 1 and all activations are sigmoid. The loss function is supposed to be the MSE. With the notations above we have thus $W^{[\ell+1]}, A^{[\ell]} \in \R$ and $A^{[\ell+1]} = \sigma(W^{[\ell+1]} A^{[\ell]} + b^{[\ell+1]})$.
+\begin{enumerate}
+  \item show that the derivative of the sigmoid function is positive and upper bounded by $1/4$;
+  \item Show that the gradient of the loss with respect to $W^{[\ell]}$ is of the form $\left( \prod_{j=\ell}^{L} \sigma'(W^{[j+1]} A^{[j]}) W^{[j+1]} \right) \frac{\partial L}{\partial A^{[L]}}$.
+  \item assume that $W^{[\ell]}$ are initialized independently as standard normal variables. Assuming a bound on the gradient of the loss find a bound, decaying exponentially as $\ell$ decreases, for the second order moment of the gradient of the loss with respect to $W^{[\ell]}$.
+\end{enumerate}
+\end{tcolorbox}
+
+\begin{tcolorbox}[remarkbox]
+\textbf{Exercise 7.6} (Poisson divergence). Formulate and prove the equivalent of the Lemma~\ref{lem:ch7-KL-minimum} for the Poisson divergence:
+\begin{equation}\label{eq:ch7-poisson-div}
+  \forall x, y \in (\R_+ \setminus \{0\})^d \quad D_P(x \| y) := \sum_{a=1}^{d} \left( x_a \log\!\left( \frac{x_a}{y_a} \right) - x_a + y_a \right).
+\end{equation}
+Is the same conclusion also true for minimization of $x \mapsto D_P(x \| y)$?
+\end{tcolorbox}
+
+\section{NN implementations}
+
+\begin{tcolorbox}[remarkbox]
+\textbf{Exercise 7.7} (MNIST classification). One of the famous NN applications is the MNIST classification. Code a MLP MNIST classifier using no special library such as PyTorch or TensorFlow. Use one or two hidden layers and SGD optimization.
+\end{tcolorbox}
+
+\begin{tcolorbox}[remarkbox]
+\textbf{Exercise 7.8} (Generative example: text data). Use a classical text, for instance ``Alice in Wonderland'' to generate the next word from this text data. To generate the dataset use NLTK package for instance:
+\begin{lstlisting}[language=Python]
+import nltk
+from nltk.corpus import gutenberg
+from nltk.util import ngrams
+from collections import Counter
+
+nltk.download("gutenberg")
+nltk.download("punkt")
+
+alice_text = gutenberg.words("carroll-alice.txt")  # Tokenized words
+
+# Convert to lowercase and filter out punctuation
+alice_text = [word.lower() for word in alice_text if word.isalpha()]
+
+# Generate (n-1)-grams and the next word
+n = 3  # For trigrams (2 word sequence -> predict next word)
+ngrams_list = list(ngrams(alice_text, n))
+
+# Convert to (input, target) pairs
+dataset = [("-".join(gram[:-1]), gram[-1]) for gram in ngrams_list]
+
+# Display some examples
+for i in range(5):
+    print(dataset[i])
+\end{lstlisting}
+\end{tcolorbox}
