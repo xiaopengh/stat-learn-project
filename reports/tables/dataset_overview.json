@@ -1,0 +1,9 @@
+{
+  "n_rows": 21197,
+  "n_columns": 82,
+  "n_features": 81,
+  "n_numeric_features": 81,
+  "target": "critical_temp",
+  "missing_values_total": 0,
+  "duplicate_rows": 0
+}
