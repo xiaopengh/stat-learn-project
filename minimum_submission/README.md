@@ -1,7 +1,15 @@
-# Minimal Notebook Submission
+# Superconductivity Critical Temperature Prediction
 
-This folder contains the minimum project structure needed to run
-`notebooks/final_submission.ipynb` from a clean checkout.
+Statistical learning project for Subject 4: predicting the critical temperature `critical_temp` of superconducting materials from 81 physical and chemical covariates.
+
+## Authors
+
+- Xiaopeng Zhang
+- Marçal Herraiz Bayó
+- Shuaibo HUANG
+- Carlos Cosentino
+- Polina Ptukha
+- Lyes Bouchoucha
 
 ## Run
 
