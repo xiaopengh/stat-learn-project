@@ -13,19 +13,13 @@
 \setlength{\emergencystretch}{2em}
 
 \title{Subject 4: Prediction of the Critical Temperature of Superconducting Materials}
-\author{Xiaopeng Zhang \\ Marçal Herraiz Bayó \\ Shuaibo HUANG \\
-Carlos Cosentino \\ Polina Ptukha \\ Lyes Bouchoucha}
+\author{\textbf{Authors} Xiaopeng Zhang, Marçal Herraiz Bayó, Shuaibo Huang,\\
+Carlos Cosentino, Polina Ptukha, and Lyes Bouchoucha.}
 \date{Statistical Learning Project --- \today}
 
 \begin{document}
 
 \maketitle
-
-\begin{center}
-\textbf{Subject:} Subject 4, prediction of the critical temperature of superconducting materials.\\[0.3em]
-\textbf{Group members:} Xiaopeng Zhang, Marçal Herraiz Bayó, Shuaibo HUANG,
-Carlos Cosentino, Polina Ptukha, and Lyes Bouchoucha.
-\end{center}
 
 \section{Introduction and Objective}
 
@@ -197,21 +191,54 @@ model comparisons are still reported in physically interpretable Kelvin units.
 
 \section{Models}
 
+Let \(z_i=\log(1+y_i)\) denote the transformed target used during fitting. For
+models with standardization, let
+\[
+\widetilde x_i = D^{-1}(x_i-\mu),
+\]
+where \(\mu\) and \(D\) are the training-set feature means and standard
+deviations. All formulas below describe predictions on the transformed scale; the
+reported Kelvin prediction is always
+\[
+\widehat y(x)=\exp(\widehat z(x))-1.
+\]
+
 \paragraph{Constant baseline.}
 The baseline predicts a constant value learned from the training data. It provides
 a minimal reference: a useful model must improve substantially on this baseline.
+With \(n_{\mathrm{train}}\) training observations, the fitted constant is
+\[
+\widehat z(x)=\widehat c,\qquad
+\widehat c=\frac{1}{n_{\mathrm{train}}}\sum_{i=1}^{n_{\mathrm{train}}}z_i.
+\]
+Thus the baseline ignores all covariates and predicts the training mean on the
+log-transformed scale.
 
 \paragraph{Ordinary least squares.}
-The linear regression model assumes
-\(\widehat f(x)=\widehat\beta_0+x^\top\widehat\beta\), where the coefficients are
-chosen to minimize the residual sum of squares on the transformed target. OLS is
-simple and interpretable, but it can be unstable when predictors are correlated.
+The ordinary least squares model is the affine function
+\[
+\widehat z(x)=\widehat\beta_0+\widetilde x^\top\widehat\beta,
+\]
+where
+\[
+(\widehat\beta_0,\widehat\beta)
+=\arg\min_{\beta_0,\beta}
+\sum_{i=1}^{n_{\mathrm{train}}}
+\left(z_i-\beta_0-\widetilde x_i^\top\beta\right)^2 .
+\]
+OLS is simple and interpretable, but it can be unstable when predictors are
+correlated.
 
 \paragraph{Ridge regression.}
 Ridge regression adds an \(\ell_2\) penalty to stabilize the linear model:
 \[
-\min_{\beta_0,\beta}\sum_{i=1}^{n}(z_i-\beta_0-x_i^\top\beta)^2+
-\lambda\sum_{j=1}^{p}\beta_j^2.
+(\widehat\beta_0,\widehat\beta)
+=\arg\min_{\beta_0,\beta}
+\sum_{i=1}^{n_{\mathrm{train}}}
+\left(z_i-\beta_0-\widetilde x_i^\top\beta\right)^2+
+\lambda\sum_{j=1}^{p}\beta_j^2,
+\qquad
+\widehat z(x)=\widehat\beta_0+\widetilde x^\top\widehat\beta .
 \]
 The penalty shrinks coefficients toward zero without setting them exactly to zero.
 The regularization parameter is selected by cross-validation on the training set.
@@ -219,8 +246,13 @@ The regularization parameter is selected by cross-validation on the training set
 \paragraph{Lasso regression.}
 Lasso regression replaces the Ridge penalty by an \(\ell_1\) penalty:
 \[
-\min_{\beta_0,\beta}\sum_{i=1}^{n}(z_i-\beta_0-x_i^\top\beta)^2+
-\lambda\sum_{j=1}^{p}|\beta_j|.
+(\widehat\beta_0,\widehat\beta)
+=\arg\min_{\beta_0,\beta}
+\sum_{i=1}^{n_{\mathrm{train}}}
+\left(z_i-\beta_0-\widetilde x_i^\top\beta\right)^2+
+\lambda\sum_{j=1}^{p}|\beta_j|,
+\qquad
+\widehat z(x)=\widehat\beta_0+\widetilde x^\top\widehat\beta .
 \]
 This can set some coefficients exactly to zero, which makes the fitted linear
 model more sparse. As with Ridge, the penalty parameter is selected without using
@@ -228,18 +260,51 @@ the held-out test set.
 
 \paragraph{k-nearest-neighbor regression.}
 k-NN predicts a new response by averaging the responses of the closest training
-observations in standardized feature space. It is nonlinear and can adapt to local
-structure in the data. The number of neighbors \(k\) is selected by grid search
-with cross-validation. This method is powerful here but stores the training set
-and can be sensitive to the choice of scaling and distance metric.
+observations in standardized feature space. For a new point \(x\), define
+\[
+\mathcal N_k(\widetilde x)=
+\left\{i:\widetilde x_i \text{ is among the } k \text{ smallest values of }
+\|\widetilde x-\widetilde x_i\|_2\right\}.
+\]
+The uniform-weight k-NN prediction is
+\[
+\widehat z(x)=\frac{1}{k}\sum_{i\in\mathcal N_k(\widetilde x)} z_i .
+\]
+It is nonlinear and can adapt to local structure in the data. The number of
+neighbors \(k\) is selected by grid search with cross-validation. This method is
+powerful here but stores the training set and can be sensitive to the choice of
+scaling and distance metric.
 
 \paragraph{Histogram-based gradient boosting.}
 The histogram gradient boosting regressor is included as an additional nonlinear
-benchmark. It builds an additive model of regression trees, where each new tree is
-fit to reduce the current prediction error. This method is not treated as a
-course-covered method in the report, so its functioning is stated explicitly. It
-is useful for this dataset because interactions between chemical descriptors are
-plausible and may not be captured by linear models.
+benchmark. It builds an additive model of regression trees on the transformed
+target. With squared-error loss, the model has the form
+\[
+\widehat z(x)=F_M(x),\qquad
+F_M(x)=F_0(x)+\nu\sum_{m=1}^{M} h_m(x),
+\]
+where \(F_0(x)=\bar z_{\mathrm{train}}\), \(\nu\) is the learning rate, and each
+tree is a piecewise constant function
+\[
+h_m(x)=\sum_{\ell=1}^{L_m}\gamma_{m\ell}\mathbf 1\{x\in R_{m\ell}\}.
+\]
+At boosting step \(m\), the current residuals are
+\[
+r_{im}=z_i-F_{m-1}(x_i),
+\]
+and the tree partitions \(R_{m1},\ldots,R_{mL_m}\) are chosen from histogram-binned
+feature splits to reduce squared error. For a fixed leaf \(R_{m\ell}\), the leaf
+value is equivalently
+\[
+\gamma_{m\ell}
+=\arg\min_{\gamma}
+\sum_{i:x_i\in R_{m\ell}}\left(r_{im}-\gamma\right)^2+
+\lambda_2\gamma^2,
+\]
+where \(\lambda_2\) is the tree leaf \(\ell_2\) regularization parameter. This
+method is not treated as a course-covered method here, so its functioning is
+stated explicitly. It is useful for this dataset because interactions between
+chemical descriptors are plausible and may not be captured by linear models.
 
 \section{Model Selection and Evaluation Criteria}
 
@@ -278,8 +343,8 @@ constant predictor.
 \end{table}
 
 The nonlinear models outperform the linear family by a large margin. The
-k-nearest-neighbor model obtains the lowest RMSE, approximately 10.66 K, the
-lowest MAE, approximately 5.67 K, and the highest \(R^2\), approximately 0.904.
+k-nearest-neighbor model obtains the lowest RMSE, approximately 10.72 K, the
+lowest MAE, approximately 5.72 K, and the highest \(R^2\), approximately 0.902.
 The histogram-based gradient boosting model is very close, with RMSE approximately
 10.75 K and \(R^2\) approximately 0.902. OLS, Ridge, and Lasso remain around RMSE
 18.3 K. This gap suggests that the relationship between the engineered physical
@@ -320,7 +385,7 @@ it cannot create the nonlinear local behavior captured by k-NN and boosting.
 \end{figure}
 
 The residual diagnostics indicate that the selected model has little average bias
-overall, with a test residual mean of about 0.39 K. However, the error is not
+overall, with a test residual mean of about 0.41 K. However, the error is not
 uniform over the target range. Predictions are most accurate for low-temperature
 materials below 10 K. Errors are larger for the high-temperature tail, especially
 for materials above 100 K, where the model tends to underpredict on average. This
@@ -366,15 +431,20 @@ the original scale and because the transformed target is much less skewed.
 
 \section{Reproducibility}
 
-All main computations are organized as reusable Python modules under \path{src/}.
-The scripts \path{scripts/run_eda.py}, \path{scripts/train_models.py}, and
-\path{scripts/evaluate_models.py} produce the tables, fitted model artifacts, and
-figures used in this report. The configuration file \path{configs/default.yaml}
-records the random seed, the train-test split, the cross-validation settings, the
-metric list, and model hyperparameter grids. Package versions are managed with
-\texttt{uv} and locked in \path{uv.lock}. This organization makes the final
-notebook a clean assembly of already-tested pipeline steps rather than the only
-place where the analysis exists.
+The results can be reproduced by executing
+\path{notebooks/final_submission.ipynb}. The notebook calls reusable Python
+modules under \path{src/}, which implement the data audit, preprocessing, model
+fitting, and evaluation steps.
+
+The configuration file \path{configs/default.yaml} records the random seed, the
+80/20 train-test split, the five-fold cross-validation setting, the metric list,
+and the model hyperparameter grids. Package versions are managed with
+\texttt{uv} through \path{pyproject.toml} and \path{uv.lock}. To reproduce the
+analysis in the project repository, one first runs \texttt{uv sync} and then
+executes \path{notebooks/final_submission.ipynb} with the synced Python
+environment. The random seed is set before model training, preprocessing is fit
+inside each training fold or training split, and the held-out test set is used
+only for final reporting.
 
 \section{Limitations and Possible Extensions}
 
@@ -402,10 +472,9 @@ The project defines a supervised regression problem for predicting
 \texttt{critical\_temp} from 81 physical and chemical covariates. After duplicate
 removal, leakage-controlled preprocessing, cross-validation on the training set,
 and final evaluation on a held-out test set, k-nearest-neighbor regression with
-\(k=3\) is the recommended model. It achieves RMSE about 10.66 K, MAE about
-5.67 K, and \(R^2\) about 0.904. Histogram-based gradient boosting is a very close
-nonlinear alternative. Linear regression, Ridge, and Lasso are useful baselines
-and course-connected references, but they are not accurate enough to match the
+\(k=3\) is the recommended model. It achieves RMSE about 10.72 K, MAE about
+5.72 K, and \(R^2\) about 0.902. Histogram-based gradient boosting is a very close
+nonlinear alternative. Linear regression, Ridge, and Lasso are useful baselines, but they are not accurate enough to match the
 nonlinear methods on this dataset. The final diagnostic analysis shows that the
 main remaining challenge is accurate prediction for the high-temperature tail.
 
