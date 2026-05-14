@@ -2,6 +2,15 @@
 
 Statistical learning project for Subject 4: predicting the critical temperature `critical_temp` of superconducting materials from 81 physical and chemical covariates.
 
+## Authors
+
+- Xiaopeng Zhang
+- Marçal Herraiz Bayó
+- Shuaibo HUANG
+- Carlos Cosentino
+- Polina Ptukha
+- Lyes Bouchoucha
+
 ## Project Layout
 
 ```text
@@ -55,3 +64,12 @@ The primary dependency source is `pyproject.toml`, with exact resolved versions 
 - Generated figures should be written to `reports/figures/`.
 - The LaTeX report entry point is `reports/report.tex`.
 - Course method references are stored as `.tex` files in `poly/`.
+
+## Reproduce the Current Analysis
+
+```bash
+env MPLCONFIGDIR=.matplotlib-cache uv --cache-dir .uv-cache run python scripts/run_eda.py
+env MPLCONFIGDIR=.matplotlib-cache uv --cache-dir .uv-cache run python scripts/train_models.py
+env MPLCONFIGDIR=.matplotlib-cache uv --cache-dir .uv-cache run python scripts/evaluate_models.py
+env MPLCONFIGDIR=.matplotlib-cache uv --cache-dir .uv-cache run python scripts/build_final_notebook.py
+```

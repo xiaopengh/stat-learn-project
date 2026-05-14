@@ -55,3 +55,33 @@ def plot_prediction_diagnostics(
         "predicted_vs_observed": pred_path,
         "residual_diagnostics": residual_path,
     }
+
+
+def plot_target_range_error_summary(
+    target_range_summary: pd.DataFrame,
+    figures_dir: Path,
+    *,
+    model_name: str,
+) -> Path:
+    ensure_dir(figures_dir)
+    if target_range_summary.empty:
+        msg = "Target-range error summary is empty."
+        raise ValueError(msg)
+
+    plot_data = target_range_summary[["target_range", "mae", "rmse"]].melt(
+        id_vars="target_range",
+        var_name="metric",
+        value_name="error",
+    )
+    output_path = figures_dir / "best_model_error_by_target_range.png"
+
+    plt.figure(figsize=(8, 4.8))
+    sns.barplot(data=plot_data, x="target_range", y="error", hue="metric")
+    plt.title(f"Error by target range: {model_name}")
+    plt.xlabel("Observed critical temperature range")
+    plt.ylabel("Error (K)")
+    plt.legend(title="Metric")
+    plt.tight_layout()
+    plt.savefig(output_path, dpi=180, bbox_inches="tight")
+    plt.close()
+    return output_path

@@ -7,7 +7,11 @@ import numpy as np
 import pandas as pd
 import seaborn as sns
 
-from src.data import feature_target_correlations
+from src.data import (
+    feature_family_correlation_summary,
+    feature_target_correlations,
+    target_by_number_of_elements,
+)
 from src.utils import ensure_dir
 
 
@@ -96,4 +100,62 @@ def plot_selected_feature_correlation_matrix(
     plt.figure(figsize=(11, 9))
     sns.heatmap(corr_data, cmap="vlag", center=0, square=False, linewidths=0.3)
     plt.title("Correlation Matrix for Most Target-Correlated Features")
+    return _save_current_figure(output_path)
+
+
+def plot_target_by_number_of_elements(
+    dataset: pd.DataFrame,
+    target_name: str,
+    figures_dir: Path,
+) -> Path:
+    output_path = figures_dir / "target_by_number_of_elements.png"
+    summary = target_by_number_of_elements(dataset, target_name)
+
+    fig, axes = plt.subplots(1, 2, figsize=(13, 4.5), sharex=False)
+    sns.boxplot(
+        data=dataset,
+        x="number_of_elements",
+        y=target_name,
+        color="#8fb4d8",
+        showfliers=False,
+        ax=axes[0],
+    )
+    axes[0].set_title("Critical temperature by number of elements")
+    axes[0].set_xlabel("Number of elements in formula")
+    axes[0].set_ylabel("Critical temperature (K)")
+
+    sns.barplot(
+        data=summary,
+        x="number_of_elements",
+        y="high_temp_share",
+        color="#d8988f",
+        ax=axes[1],
+    )
+    axes[1].set_title("Share of materials with critical temperature ≥ 77 K")
+    axes[1].set_xlabel("Number of elements in formula")
+    axes[1].set_ylabel("Share")
+    axes[1].set_ylim(0, max(0.05, float(summary["high_temp_share"].max()) * 1.15))
+    fig.suptitle("Target behavior across composition complexity", y=1.03)
+    return _save_current_figure(output_path)
+
+
+def plot_feature_family_correlations(
+    dataset: pd.DataFrame,
+    target_name: str,
+    figures_dir: Path,
+) -> Path:
+    output_path = figures_dir / "feature_family_correlations.png"
+    summary = feature_family_correlation_summary(dataset, target_name).sort_values(
+        "max_abs_correlation",
+    )
+
+    plt.figure(figsize=(9, 5.5))
+    plt.barh(
+        summary["property_family"],
+        summary["max_abs_correlation"],
+        color="#2f6f9f",
+    )
+    plt.xlabel("Largest absolute Pearson correlation in family")
+    plt.ylabel("Feature property family")
+    plt.title("Most target-associated engineered descriptor per property family")
     return _save_current_figure(output_path)

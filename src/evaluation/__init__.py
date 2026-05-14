@@ -1,7 +1,9 @@
 from src.evaluation.diagnostics import (
     build_residual_records,
     summarize_residual_diagnostics,
+    summarize_residuals_by_target_range,
     write_residual_diagnostics,
+    write_target_range_diagnostics,
 )
 from src.evaluation.metrics import evaluate_regression_metrics, mae, mse, r2, rmse
 from src.evaluation.tables import (
@@ -22,6 +24,8 @@ __all__ = [
     "r2",
     "rmse",
     "summarize_residual_diagnostics",
+    "summarize_residuals_by_target_range",
     "write_comparison_tables",
     "write_residual_diagnostics",
+    "write_target_range_diagnostics",
 ]

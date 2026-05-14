@@ -1,5 +1,7 @@
 \documentclass[11pt,a4paper]{article}
 
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
 \usepackage[margin=2.5cm]{geometry}
 \usepackage{graphicx}
 \usepackage{amsmath}
@@ -7,102 +9,246 @@
 \usepackage{booktabs}
 \usepackage{hyperref}
 
-\graphicspath{{reports/figures/}{figures/}}
+\graphicspath{{figures/}}
+\setlength{\emergencystretch}{2em}
 
 \title{Subject 4: Prediction of the Critical Temperature of Superconducting Materials}
-\author{Names of all authors}
-\date{\today}
+\author{Xiaopeng Zhang \\ Marçal Herraiz Bayó \\ Shuaibo HUANG \\
+Carlos Cosentino \\ Polina Ptukha \\ Lyes Bouchoucha}
+\date{Statistical Learning Project --- \today}
 
 \begin{document}
 
 \maketitle
 
-\section{Introduction}
+\begin{center}
+\textbf{Subject:} Subject 4, prediction of the critical temperature of superconducting materials.\\[0.3em]
+\textbf{Group members:} Xiaopeng Zhang, Marçal Herraiz Bayó, Shuaibo HUANG,
+Carlos Cosentino, Polina Ptukha, and Lyes Bouchoucha.
+\end{center}
 
-This project studies the UCI superconductivity dataset. The statistical learning
-problem is a supervised regression problem: for each superconducting material, the
-target variable is the critical temperature \(Y=\texttt{critical\_temp}\), measured in
-Kelvin, and the covariates \(X\in\mathbb{R}^{81}\) are physical and chemical
-descriptors of the material. The objective is to build a predictor
-\(\widehat f(X)\) that estimates the critical temperature from these covariates.
+\section{Introduction and Objective}
 
-\section{Dataset Overview}
+Superconducting materials are characterized by a critical temperature above which
+their superconducting behavior disappears. Predicting this temperature from
+chemical descriptors is a useful statistical learning problem because experimental
+measurement is costly, while composition-level information is comparatively easy
+to record. In this project, the response variable is
+\(Y=\texttt{critical\_temp}\), measured in Kelvin, and the predictors are the 81
+numerical physical and chemical covariates supplied in the UCI superconductivity
+dataset.
 
-The raw dataset contains 21,263 materials and 81 numerical explanatory variables.
-The version used in the code is fetched from the UCI repository with dataset id 464
-and is cached locally by the reproducible Python pipeline. We found 66 exact
-duplicate rows in the full feature-target table. These duplicates were removed
-before the train-test split to avoid having identical observations in both sets.
-The processed modeling table therefore contains 21,197 observations and no missing
-values. The target is strongly right-skewed: its median is 20 K, while its mean is
-approximately 34.49 K and its maximum is 185 K.
+The problem is formulated as supervised regression. Given observations
+\((x_i,y_i)\), with \(x_i\in\mathbb{R}^{81}\) and \(y_i\in\mathbb{R}_+\), the
+objective is to build a function \(\widehat f\) such that \(\widehat f(x)\)
+predicts the critical temperature of a new material as accurately as possible. We
+compare a constant baseline, ordinary least squares, Ridge regression, Lasso
+regression, k-nearest-neighbor regression, and a histogram-based gradient
+boosting regressor. The first four non-baseline methods allow us to connect the
+analysis with the course material, while the boosting model is included as an
+explicitly explained nonlinear benchmark.
 
-\begin{figure}[h]
+\section{Dataset and Data Audit}
+
+The raw UCI dataset contains 21,263 materials. Each material is described by 81
+engineered numerical variables derived from chemical formulae and elemental
+properties such as atomic mass, first ionization energy, atomic radius, density,
+electron affinity, fusion heat, thermal conductivity, and valence. The engineered
+variables include summary statistics such as arithmetic means, weighted means,
+geometric means, ranges, entropies, and standard deviations. The target column is
+\texttt{critical\_temp}.
+
+Before modeling, exact duplicate rows in the full feature-target table are
+removed. This is done before the train-test split, so identical observations
+cannot appear once in the training set and once in the test set. The cleaning step
+removes 66 exact duplicates and leaves 21,197 observations. No missing values are
+present after cleaning, so no imputation policy is needed for this version of the
+dataset. The first-stage data audit is saved by the pipeline as JSON and CSV
+artifacts under \texttt{reports/tables/}.
+
+The target distribution is right-skewed. The mean critical temperature is
+approximately 34.49 K, the median is 20 K, and the maximum is 185 K. This means
+that a model can obtain low average error on the many low-temperature materials
+while still making scientifically important mistakes in the high-temperature tail.
+For that reason, the model comparison is supplemented with residual diagnostics
+by target range.
+
+\begin{figure}[htbp]
     \centering
     \includegraphics[width=0.95\linewidth]{target_distribution.png}
-    \caption{Distribution and boxplot of the critical temperature. The target is
-    positive and right-skewed, with a long upper tail.}
+    \caption{Distribution and boxplot of the critical temperature. The response is
+    positive and right-skewed, with a long upper tail of high-temperature
+    materials.}
 \end{figure}
 
-\begin{figure}[h]
+\begin{figure}[htbp]
     \centering
     \includegraphics[width=0.95\linewidth]{log_target_distribution.png}
     \caption{Distribution and boxplot after the transformation
-    \(\log(1+\texttt{critical\_temp})\). This transformation reduces the skewness of
-    the target and is used inside the modeling pipelines.}
+    \(\log(1+\texttt{critical\_temp})\). The transformed response is less skewed,
+    which motivates using this transformation inside the modeling pipelines.}
 \end{figure}
 
-\section{Exploratory Analysis}
+\section{Exploratory Data Analysis}
 
-The exploratory analysis focuses on the target distribution, missing values,
-feature summaries, and marginal correlations between individual features and the
-target. Several weighted descriptors of valence, atomic radius, electron affinity,
-and thermal conductivity are among the variables most correlated with the critical
-temperature.
+The exploratory analysis has three goals: to understand the target variable, to
+check the quality and structure of the covariates, and to identify possible
+nonlinear relationships that could influence model choice. The marginal Pearson
+correlations show that several thermal conductivity, atomic radius, valence,
+atomic mass, and ionization-energy descriptors are strongly related to the target.
+These correlations are not used as a feature selection rule; they are descriptive
+statistics that help interpret the dataset and the behavior of later models.
 
-\begin{figure}[h]
+\begin{figure}[htbp]
     \centering
     \includegraphics[width=0.9\linewidth]{feature_target_correlations.png}
-    \caption{The twenty features with the largest absolute Pearson correlation with
-    the target. These correlations are descriptive only and do not by themselves
-    define a final model.}
+    \caption{The twenty features with the largest absolute Pearson correlation
+    with the critical temperature. The signs indicate whether the marginal linear
+    relation is positive or negative.}
 \end{figure}
 
-\begin{figure}[h]
+\begin{figure}[htbp]
     \centering
     \includegraphics[width=0.9\linewidth]{selected_feature_correlation_matrix.png}
     \caption{Correlation matrix for the features most correlated with the target.
-    The visible dependence between covariates motivates regularized models such as
-    Ridge and Lasso.}
+    Strong dependence between covariates is visible, which supports the use of
+    regularized linear models such as Ridge and Lasso.}
 \end{figure}
 
-\section{Preprocessing}
+The feature families have different levels of marginal association with the
+response. The strongest single correlation is obtained by
+\texttt{wtd\_std\_ThermalConductivity}; thermal conductivity, atomic radius,
+valence, atomic mass, and the number of elements all contain variables with
+absolute correlations above 0.60. These observations are consistent with the
+physical intuition that both composition complexity and elemental property
+variation matter.
 
-The preprocessing removes exact duplicate full rows, then splits the observations
-once into a training set and a held-out test set with an 80/20 split and random
-seed 42. Model selection and hyperparameter calibration are performed only on the
-training set. For OLS, Ridge, Lasso, and k-nearest neighbors, the covariates are
-standardized inside a scikit-learn pipeline so that scaling is fit only on the
-training folds. The target is transformed by \(\log(1+Y)\) during training and
-predictions are transformed back with \(\exp(\cdot)-1\) before evaluation. All
-reported errors are therefore expressed on the original Kelvin scale.
+\begin{table}[htbp]
+    \centering
+    \resizebox{\linewidth}{!}{%
+    \IfFileExists{reports/tables/feature_family_correlation_summary.tex}
+      {\input{reports/tables/feature_family_correlation_summary.tex}}
+      {\input{tables/feature_family_correlation_summary.tex}}
+    }
+    \caption{Correlation summary by engineered feature family. For each family,
+    the table reports the average absolute marginal correlation and the strongest
+    individual feature.}
+\end{table}
 
-\section{Methods}
+The number of chemical elements in the formula is itself an informative covariate.
+Single-, two-, and three-element materials are mostly low-temperature in this
+dataset, whereas materials with four or more elements are much more likely to
+reach high critical temperatures. The 77 K threshold is useful as a descriptive
+reference because it corresponds approximately to the boiling point of liquid
+nitrogen and is often used to distinguish practically attractive high-temperature
+superconductors.
 
-The baseline model predicts a constant average target value. The course-covered
-linear methods are ordinary least squares, Ridge regression, and Lasso regression.
-Ridge and Lasso use cross-validation on the training set to calibrate their
-regularization parameters. We also include k-nearest-neighbor regression, with the
-number of neighbors selected by cross-validation.
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.95\linewidth]{target_by_number_of_elements.png}
+    \caption{Critical temperature as a function of the number of elements. The
+    boxplots show the shift in the target distribution, and the bar plot shows the
+    proportion of materials with critical temperature at least 77 K.}
+\end{figure}
 
-As an additional nonlinear benchmark, we use a histogram-based gradient boosting
-regressor. This method is not treated as a course-covered method in the report. It
-builds an additive model of shallow regression trees, where each new tree is fit to
-reduce the current prediction error. It is useful here because the relation between
-the physical descriptors and the critical temperature is unlikely to be purely
-linear.
+\begin{table}[htbp]
+    \centering
+    \resizebox{\linewidth}{!}{%
+    \IfFileExists{reports/tables/target_by_number_of_elements.tex}
+      {\input{reports/tables/target_by_number_of_elements.tex}}
+      {\input{tables/target_by_number_of_elements.tex}}
+    }
+    \caption{Target summary by number of elements in the material formula. The
+    share column reports the fraction of observations with critical temperature
+    at least 77 K.}
+\end{table}
 
-\section{Evaluation Criteria}
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.85\linewidth]{feature_family_correlations.png}
+    \caption{Largest absolute marginal target correlation within each engineered
+    physical-property family. This complements the individual feature ranking by
+    grouping related descriptors.}
+\end{figure}
+
+\section{Preprocessing and Leakage Control}
+
+The preprocessing sequence is designed to make the final test-set results
+credible. First, the raw UCI feature and target tables are merged and exact full
+rows are removed. Second, the cleaned table is split once into a training set and
+a held-out test set using an 80/20 split with random seed 42. The held-out test set
+is not used for hyperparameter selection.
+
+For OLS, Ridge, Lasso, and k-nearest neighbors, the covariates are standardized
+inside a scikit-learn pipeline. The centering and scaling parameters are fit only
+on the relevant training fold during cross-validation and only on the full
+training set before final test evaluation. This avoids data leakage from the test
+set into preprocessing. The tree-based histogram gradient boosting model is not
+sensitive to monotone feature scaling, so it is fit without standardization.
+
+The target is transformed during fitting using
+\[
+Z=\log(1+Y).
+\]
+Predictions are transformed back to the original Kelvin scale using
+\(\widehat Y=\exp(\widehat Z)-1\) before metrics are computed. The transformation
+reduces the dominance of the high-temperature tail during fitting and ensures that
+model comparisons are still reported in physically interpretable Kelvin units.
+
+\section{Models}
+
+\paragraph{Constant baseline.}
+The baseline predicts a constant value learned from the training data. It provides
+a minimal reference: a useful model must improve substantially on this baseline.
+
+\paragraph{Ordinary least squares.}
+The linear regression model assumes
+\(\widehat f(x)=\widehat\beta_0+x^\top\widehat\beta\), where the coefficients are
+chosen to minimize the residual sum of squares on the transformed target. OLS is
+simple and interpretable, but it can be unstable when predictors are correlated.
+
+\paragraph{Ridge regression.}
+Ridge regression adds an \(\ell_2\) penalty to stabilize the linear model:
+\[
+\min_{\beta_0,\beta}\sum_{i=1}^{n}(z_i-\beta_0-x_i^\top\beta)^2+
+\lambda\sum_{j=1}^{p}\beta_j^2.
+\]
+The penalty shrinks coefficients toward zero without setting them exactly to zero.
+The regularization parameter is selected by cross-validation on the training set.
+
+\paragraph{Lasso regression.}
+Lasso regression replaces the Ridge penalty by an \(\ell_1\) penalty:
+\[
+\min_{\beta_0,\beta}\sum_{i=1}^{n}(z_i-\beta_0-x_i^\top\beta)^2+
+\lambda\sum_{j=1}^{p}|\beta_j|.
+\]
+This can set some coefficients exactly to zero, which makes the fitted linear
+model more sparse. As with Ridge, the penalty parameter is selected without using
+the held-out test set.
+
+\paragraph{k-nearest-neighbor regression.}
+k-NN predicts a new response by averaging the responses of the closest training
+observations in standardized feature space. It is nonlinear and can adapt to local
+structure in the data. The number of neighbors \(k\) is selected by grid search
+with cross-validation. This method is powerful here but stores the training set
+and can be sensitive to the choice of scaling and distance metric.
+
+\paragraph{Histogram-based gradient boosting.}
+The histogram gradient boosting regressor is included as an additional nonlinear
+benchmark. It builds an additive model of regression trees, where each new tree is
+fit to reduce the current prediction error. This method is not treated as a
+course-covered method in the report, so its functioning is stated explicitly. It
+is useful for this dataset because interactions between chemical descriptors are
+plausible and may not be captured by linear models.
+
+\section{Model Selection and Evaluation Criteria}
+
+Model selection is performed only with the training data. Ridge and Lasso choose
+regularization strengths from predefined grids, and k-NN chooses
+\(k\in\{3,5,7,11,15,21,31\}\) by five-fold cross-validation. The gradient boosting
+hyperparameters are fixed in the configuration file and include a learning rate of
+0.06, 350 maximum boosting iterations, 31 maximum leaf nodes, \(\ell_2\)
+regularization 0.01, and early stopping on an internal validation fraction.
 
 For observations \((y_i,\widehat y_i)_{i=1}^n\) in the held-out test set, the main
 criteria are
@@ -115,40 +261,57 @@ criteria are
 R^2=1-\frac{\sum_{i=1}^n (y_i-\widehat y_i)^2}
 {\sum_{i=1}^n (y_i-\bar y)^2}.
 \]
-RMSE is used as the primary selection criterion because it is expressed in Kelvin
-and penalizes large errors strongly. MAE and \(R^2\) are used as complementary
-criteria.
+RMSE is the primary selection criterion because it is expressed in Kelvin and
+penalizes large errors strongly. MAE is less sensitive to isolated large errors,
+and \(R^2\) measures the fraction of test-set variance explained relative to a
+constant predictor.
 
 \section{Results}
 
-\begin{table}[h]
+\begin{table}[htbp]
     \centering
     \IfFileExists{reports/tables/final_model_comparison.tex}
       {\input{reports/tables/final_model_comparison.tex}}
       {\input{tables/final_model_comparison.tex}}
-    \caption{Held-out test performance. The comparison uses only the test set,
-    after model selection on the training data.}
+    \caption{Held-out test performance. Hyperparameters are selected on the
+    training data, and this table is computed only on the test set.}
 \end{table}
 
 The nonlinear models outperform the linear family by a large margin. The
 k-nearest-neighbor model obtains the lowest RMSE, approximately 10.66 K, the
 lowest MAE, approximately 5.67 K, and the highest \(R^2\), approximately 0.904.
 The histogram-based gradient boosting model is very close, with RMSE approximately
-10.75 K and \(R^2\) approximately 0.902. The two nonlinear methods are therefore
-close in predictive performance, while OLS, Ridge, and Lasso remain around RMSE
-18.3 K. This gap suggests that the relation between the physical descriptors and
-critical temperature contains nonlinear structure or interactions that linear
-models do not capture well.
+10.75 K and \(R^2\) approximately 0.902. OLS, Ridge, and Lasso remain around RMSE
+18.3 K. This gap suggests that the relationship between the engineered physical
+descriptors and the critical temperature contains nonlinear structure or
+interactions that linear models do not capture well.
 
-\begin{figure}[h]
+The best selected k-NN model uses \(k=3\), while Ridge selects a small penalty
+\(\alpha=0.1\) and Lasso selects \(\alpha=10^{-4}\). The small amount of
+regularization selected for the linear models is consistent with the fact that the
+linear signal is present but insufficient: shrinkage stabilizes coefficients, yet
+it cannot create the nonlinear local behavior captured by k-NN and boosting.
+
+\begin{table}[htbp]
+    \centering
+    \resizebox{\linewidth}{!}{%
+    \IfFileExists{reports/tables/final_model_residuals_summary.tex}
+      {\input{reports/tables/final_model_residuals_summary.tex}}
+      {\input{tables/final_model_residuals_summary.tex}}
+    }
+    \caption{Residual diagnostics by model on the held-out test set. Residuals are
+    defined as observed minus predicted critical temperature in Kelvin.}
+\end{table}
+
+\begin{figure}[htbp]
     \centering
     \includegraphics[width=0.68\linewidth]{best_model_predicted_vs_observed.png}
-    \caption{Predicted versus observed critical temperature for the selected model.
-    Points near the diagonal correspond to accurate predictions on the Kelvin
-    scale.}
+    \caption{Predicted versus observed critical temperature for the selected
+    model. Points near the diagonal correspond to accurate predictions on the
+    Kelvin scale.}
 \end{figure}
 
-\begin{figure}[h]
+\begin{figure}[htbp]
     \centering
     \includegraphics[width=0.82\linewidth]{best_model_residual_diagnostics.png}
     \caption{Residuals of the selected model as a function of predicted critical
@@ -156,24 +319,94 @@ models do not capture well.
     specific prediction ranges.}
 \end{figure}
 
-\section{Limitations}
+The residual diagnostics indicate that the selected model has little average bias
+overall, with a test residual mean of about 0.39 K. However, the error is not
+uniform over the target range. Predictions are most accurate for low-temperature
+materials below 10 K. Errors are larger for the high-temperature tail, especially
+for materials above 100 K, where the model tends to underpredict on average. This
+is an important limitation because the high-temperature region is often the most
+scientifically interesting part of the dataset.
 
-The final nonlinear model is less directly interpretable than the regularized
-linear models. The analysis also uses the engineered UCI features rather than
-reconstructing descriptors from chemical formulae. Finally, the target
-transformation improves numerical behavior but means that the fitted objective is
-not exactly the same as directly minimizing squared error in Kelvin.
+\begin{table}[htbp]
+    \centering
+    \resizebox{\linewidth}{!}{%
+    \IfFileExists{reports/tables/best_model_error_by_target_range.tex}
+      {\input{reports/tables/best_model_error_by_target_range.tex}}
+      {\input{tables/best_model_error_by_target_range.tex}}
+    }
+    \caption{Selected-model error by observed critical-temperature range. The
+    table highlights that test error increases in the high-temperature tail.}
+\end{table}
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.78\linewidth]{best_model_error_by_target_range.png}
+    \caption{MAE and RMSE of the selected model by observed target range. The
+    highest-temperature materials are the most difficult for the model.}
+\end{figure}
+
+\section{Discussion}
+
+The comparison leads to two main conclusions. First, the nonlinear structure in
+the dataset is strong: k-NN and gradient boosting improve the RMSE by more than
+7 K compared with the linear methods. Second, the best predictive model is not
+necessarily the most interpretable model. Ridge and Lasso summarize the marginal
+linear contribution of standardized descriptors and are easier to explain, but
+both lose substantial predictive accuracy. k-NN gives the best held-out metrics in
+this run, while gradient boosting is nearly as accurate and may be easier to use
+in production because prediction does not require searching through all training
+observations.
+
+The target transformation also matters. Fitting on \(\log(1+Y)\) reduces the
+influence of extremely high target values and helps all methods produce positive,
+stable predictions after inverse transformation. The trade-off is that the fitted
+objective is not exactly the same as minimizing squared error directly in Kelvin.
+This trade-off is acceptable here because final evaluation is always performed on
+the original scale and because the transformed target is much less skewed.
+
+\section{Reproducibility}
+
+All main computations are organized as reusable Python modules under \path{src/}.
+The scripts \path{scripts/run_eda.py}, \path{scripts/train_models.py}, and
+\path{scripts/evaluate_models.py} produce the tables, fitted model artifacts, and
+figures used in this report. The configuration file \path{configs/default.yaml}
+records the random seed, the train-test split, the cross-validation settings, the
+metric list, and model hyperparameter grids. Package versions are managed with
+\texttt{uv} and locked in \path{uv.lock}. This organization makes the final
+notebook a clean assembly of already-tested pipeline steps rather than the only
+place where the analysis exists.
+
+\section{Limitations and Possible Extensions}
+
+The final model is evaluated on a random held-out split, not on an external
+experimental dataset. The reported error therefore measures generalization to
+similar observations from the same data source, not necessarily to future
+materials synthesized under different experimental conditions. In addition, the
+analysis uses the engineered UCI descriptors directly and does not reconstruct
+chemical features from raw formulae. Some materials with very high critical
+temperature are still underpredicted, suggesting that more specialized features,
+local models for the high-temperature tail, or uncertainty estimates could be
+useful extensions.
+
+Another limitation is interpretability. The strongest model, k-NN, is local and
+non-parametric. It explains a prediction through nearby training examples rather
+than through global coefficients. For a scientific report, Ridge and Lasso remain
+valuable because they provide a simpler linear reference, but their predictive
+performance is clearly lower. Future work could add model-agnostic interpretation
+tools or compare with additional methods after explaining them carefully, provided
+that the course-method distinction is maintained.
 
 \section{Conclusion}
 
-Based on the held-out test RMSE, MAE, and \(R^2\), the recommended model is
-k-nearest-neighbor regression with \(k=3\) selected by cross-validation. It
-substantially improves predictive accuracy compared with OLS, Ridge, and Lasso.
-The histogram-based gradient boosting regressor is a very close nonlinear
-alternative and has the practical advantage of producing a compact fitted model
-that does not require storing all training observations for prediction. If
-interpretability is prioritized over predictive performance, Ridge regression is
-the most stable linear alternative, but it loses a large amount of accuracy on this
-dataset.
+The project defines a supervised regression problem for predicting
+\texttt{critical\_temp} from 81 physical and chemical covariates. After duplicate
+removal, leakage-controlled preprocessing, cross-validation on the training set,
+and final evaluation on a held-out test set, k-nearest-neighbor regression with
+\(k=3\) is the recommended model. It achieves RMSE about 10.66 K, MAE about
+5.67 K, and \(R^2\) about 0.904. Histogram-based gradient boosting is a very close
+nonlinear alternative. Linear regression, Ridge, and Lasso are useful baselines
+and course-connected references, but they are not accurate enough to match the
+nonlinear methods on this dataset. The final diagnostic analysis shows that the
+main remaining challenge is accurate prediction for the high-temperature tail.
 
 \end{document}

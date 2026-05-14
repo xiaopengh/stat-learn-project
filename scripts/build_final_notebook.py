@@ -43,6 +43,9 @@ def build_notebook() -> nbf.NotebookNode:
             """
             # Subject 4: Prediction of the Critical Temperature of Superconducting Materials
 
+            **Authors:** Xiaopeng Zhang, Marçal Herraiz Bayó, Shuaibo HUANG,
+            Carlos Cosentino, Polina Ptukha, and Lyes Bouchoucha.
+
             This notebook is the clean code submission for the statistical learning project.
             The objective is to predict the critical temperature `critical_temp` from 81
             physical and chemical covariates in the UCI superconductivity dataset.
@@ -50,11 +53,10 @@ def build_notebook() -> nbf.NotebookNode:
         ),
         code_cell(
             """
-            from pathlib import Path
             import subprocess
             import sys
+            from pathlib import Path
 
-            import matplotlib.pyplot as plt
             import pandas as pd
             from IPython.display import Image, display
 
@@ -101,6 +103,9 @@ def build_notebook() -> nbf.NotebookNode:
             display(preprocessing.to_frame("value"))
             display(overview.to_frame("value"))
             display(target_summary.to_frame("value"))
+
+            elements = pd.read_csv(PROJECT_ROOT / "reports/tables/target_by_number_of_elements.csv")
+            display(elements)
             """
         ),
         markdown_cell(
@@ -108,7 +113,9 @@ def build_notebook() -> nbf.NotebookNode:
             The raw table contains exact duplicate rows, which are removed before the
             train-test split. The processed table has no missing values. The target is positive
             and right-skewed, so the modeling pipeline uses a `log1p` target transformation and
-            reports final errors after transforming predictions back to Kelvin.
+            reports final errors after transforming predictions back to Kelvin. The grouped
+            summary by `number_of_elements` shows that compositions with more elements are much
+            more likely to include high critical-temperature observations.
             """
         ),
         code_cell(
@@ -116,6 +123,7 @@ def build_notebook() -> nbf.NotebookNode:
             for figure in [
                 "reports/figures/target_distribution.png",
                 "reports/figures/log_target_distribution.png",
+                "reports/figures/target_by_number_of_elements.png",
             ]:
                 display(Image(filename=str(PROJECT_ROOT / figure)))
             """
@@ -126,11 +134,16 @@ def build_notebook() -> nbf.NotebookNode:
             correlations = pd.read_csv(
                 PROJECT_ROOT / "reports/tables/feature_target_correlations.csv"
             )
+            family_correlations = pd.read_csv(
+                PROJECT_ROOT / "reports/tables/feature_family_correlation_summary.csv"
+            )
             display(correlations.head(15))
+            display(family_correlations)
 
             for figure in [
                 "reports/figures/feature_target_correlations.png",
                 "reports/figures/selected_feature_correlation_matrix.png",
+                "reports/figures/feature_family_correlations.png",
             ]:
                 display(Image(filename=str(PROJECT_ROOT / figure)))
             """
@@ -147,6 +160,9 @@ def build_notebook() -> nbf.NotebookNode:
             """
             comparison = pd.read_csv(PROJECT_ROOT / "reports/tables/final_model_comparison.csv")
             display(comparison)
+
+            full_comparison = pd.read_csv(PROJECT_ROOT / "reports/tables/model_comparison.csv")
+            display(full_comparison)
             """
         ),
         markdown_cell(
@@ -154,7 +170,21 @@ def build_notebook() -> nbf.NotebookNode:
             ## Diagnosis of the Recommended Model
 
             The recommended model is the one with the smallest test RMSE. Residual plots are used
-            to check whether the error pattern reveals major systematic failures.
+            to check whether the error pattern reveals major systematic failures. We also
+            summarize the selected model by observed target range because the high-temperature
+            tail is scientifically important and harder to predict.
+            """
+        ),
+        code_cell(
+            """
+            residual_summary = pd.read_csv(
+                PROJECT_ROOT / "reports/tables/final_model_residuals_summary.csv"
+            )
+            range_errors = pd.read_csv(
+                PROJECT_ROOT / "reports/tables/best_model_error_by_target_range.csv"
+            )
+            display(residual_summary)
+            display(range_errors)
             """
         ),
         code_cell(
@@ -162,6 +192,7 @@ def build_notebook() -> nbf.NotebookNode:
             for figure in [
                 "reports/figures/best_model_predicted_vs_observed.png",
                 "reports/figures/best_model_residual_diagnostics.png",
+                "reports/figures/best_model_error_by_target_range.png",
             ]:
                 display(Image(filename=str(PROJECT_ROOT / figure)))
             """

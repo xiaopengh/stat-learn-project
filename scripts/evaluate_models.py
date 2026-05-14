@@ -16,9 +16,10 @@ from src.evaluation import (
     normalize_prediction_records,
     write_comparison_tables,
     write_residual_diagnostics,
+    write_target_range_diagnostics,
 )
 from src.utils import ensure_dir, get_logger, get_path, load_config
-from src.visualization import plot_prediction_diagnostics
+from src.visualization import plot_prediction_diagnostics, plot_target_range_error_summary
 
 LOGGER = get_logger(__name__)
 
@@ -60,8 +61,20 @@ def evaluate_models(config_path: str | Path | None = None) -> dict[str, Any]:
         split=evaluation_split,
     )
     best_model = identify_best_model(comparison_table, metric="rmse")
+    target_range_paths = write_target_range_diagnostics(
+        prediction_records,
+        output_dir=tables_dir,
+        model_name=str(best_model["model"]),
+        split=evaluation_split,
+    )
+    target_range_summary = pd.read_csv(target_range_paths["summary_csv"])
     diagnostic_figure_paths = plot_prediction_diagnostics(
         prediction_records,
+        figures_dir,
+        model_name=str(best_model["model"]),
+    )
+    target_range_figure_path = plot_target_range_error_summary(
+        target_range_summary,
         figures_dir,
         model_name=str(best_model["model"]),
     )
@@ -83,13 +96,21 @@ def evaluate_models(config_path: str | Path | None = None) -> dict[str, Any]:
         diagnostic_figure_paths["predicted_vs_observed"],
         diagnostic_figure_paths["residual_diagnostics"],
     )
+    LOGGER.info(
+        "Wrote target-range diagnostics: %s, %s and %s",
+        target_range_paths["summary_csv"],
+        target_range_paths["summary_tex"],
+        target_range_figure_path,
+    )
 
     return {
         "best_model": best_model,
         "comparison_csv": comparison_csv_path,
         "comparison_tex": comparison_tex_path,
         "residual_diagnostics": residual_paths,
+        "target_range_diagnostics": target_range_paths,
         "diagnostic_figures": diagnostic_figure_paths,
+        "target_range_figure": target_range_figure_path,
     }
 
 

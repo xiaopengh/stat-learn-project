@@ -5,6 +5,19 @@ from typing import Any
 
 import pandas as pd
 
+FEATURE_STAT_PREFIXES = (
+    "wtd_mean_",
+    "wtd_gmean_",
+    "wtd_entropy_",
+    "wtd_range_",
+    "wtd_std_",
+    "mean_",
+    "gmean_",
+    "entropy_",
+    "range_",
+    "std_",
+)
+
 
 def dataset_overview(dataset: pd.DataFrame, target_name: str) -> dict[str, Any]:
     if target_name not in dataset.columns:
@@ -69,6 +82,80 @@ def feature_target_correlations(dataset: pd.DataFrame, target_name: str) -> pd.D
     )
     correlations["abs_correlation"] = correlations["correlation"].abs()
     return correlations.sort_values("abs_correlation", ascending=False).reset_index(drop=True)
+
+
+def feature_property_family(feature_name: str) -> str:
+    """Map a UCI engineered feature name to its underlying physical property family."""
+    if feature_name == "number_of_elements":
+        return "number_of_elements"
+
+    for prefix in FEATURE_STAT_PREFIXES:
+        if feature_name.startswith(prefix):
+            return feature_name[len(prefix) :]
+    return feature_name
+
+
+def feature_family_correlation_summary(
+    dataset: pd.DataFrame,
+    target_name: str,
+) -> pd.DataFrame:
+    correlations = feature_target_correlations(dataset, target_name).copy()
+    correlations["property_family"] = correlations["feature"].map(feature_property_family)
+
+    family_summary = (
+        correlations.groupby("property_family")
+        .agg(
+            n_features=("feature", "size"),
+            mean_abs_correlation=("abs_correlation", "mean"),
+            median_abs_correlation=("abs_correlation", "median"),
+            max_abs_correlation=("abs_correlation", "max"),
+        )
+        .reset_index()
+    )
+    strongest_feature_indices = correlations.groupby("property_family")[
+        "abs_correlation"
+    ].idxmax()
+    strongest_features = correlations.loc[
+        strongest_feature_indices,
+        ["property_family", "feature", "correlation", "abs_correlation"],
+    ].rename(
+        columns={
+            "feature": "strongest_feature",
+            "correlation": "strongest_correlation",
+            "abs_correlation": "strongest_abs_correlation",
+        }
+    )
+
+    summary = family_summary.merge(strongest_features, on="property_family", how="left")
+    return summary.sort_values("max_abs_correlation", ascending=False).reset_index(drop=True)
+
+
+def target_by_number_of_elements(
+    dataset: pd.DataFrame,
+    target_name: str,
+    *,
+    high_temperature_threshold: float = 77.0,
+) -> pd.DataFrame:
+    if "number_of_elements" not in dataset.columns:
+        msg = "Column 'number_of_elements' is required for this summary."
+        raise KeyError(msg)
+
+    summary = (
+        dataset.groupby("number_of_elements")[target_name]
+        .agg(
+            n_materials="size",
+            mean_temp="mean",
+            median_temp="median",
+            q25=lambda series: series.quantile(0.25),
+            q75=lambda series: series.quantile(0.75),
+            min_temp="min",
+            max_temp="max",
+            high_temp_share=lambda series: (series >= high_temperature_threshold).mean(),
+        )
+        .reset_index()
+    )
+    summary["number_of_elements"] = summary["number_of_elements"].astype(int)
+    return summary.sort_values("number_of_elements").reset_index(drop=True)
 
 
 def validate_dataset(dataset: pd.DataFrame, config: Mapping[str, Any]) -> None:

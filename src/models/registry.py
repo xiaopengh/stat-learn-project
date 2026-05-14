@@ -68,7 +68,7 @@ def build_model_registry(
             cv=folds,
             random_state=random_seed,
             n_jobs=n_jobs,
-            max_iter=10_000,
+            max_iter=50_000,
         )
     )
     knn_search = GridSearchCV(
